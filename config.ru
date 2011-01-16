@@ -15,6 +15,13 @@ class Greeting
   property :date, Time, :default => lambda { |r, p| Time.now } # must be a Proc  
 end
 
+class XMLFile
+  include DataMapper::Resource
+  property :id, Serial # required for DataMapper
+  property :name, String
+  property :body, Text
+end
+
 class AndroidTranslationHelper
   def call(env)
     @env = env
@@ -91,7 +98,7 @@ class AndroidTranslationHelper
   end
 
   def post_greeting
-    return post_greeting2
+    return post_greeting3
     p = XhtmlPage.new
 
     p.add "<pre>" + CGI.escapeHTML(@env['rack.input'].read()) + "</pre>"
@@ -110,6 +117,38 @@ class AndroidTranslationHelper
 
     p.add filename + ":"
     p.add "<pre>" + CGI.escapeHTML(file_contents) + "</pre>"
+
+    [200, {"Content-Type" => "text/html"}, p.generate]
+  end
+
+  def post_greeting3
+    p = XhtmlPage.new
+
+    req = Rack::Request.new(@env)
+    filename = req.params['file'][:filename]
+    content_type = req.params['file'][:type]
+    file_contents = req.params['file'][:tempfile].read()
+
+    if content_type != 'text/xml' then
+      p.add "<p>Sorry, that file is <code>#{content_type}</code>, not <code>text/xml</code></p>"
+      return [200, {"Content-Type" => "text/html"}, p.generate]
+    end
+
+    doc = Nokogiri::XML(file_contents)
+    strings = doc.xpath('//string')
+
+    strings.each do |s|
+      p.add "<hr><b>#{s.attr('name')}</b><br />\n"
+
+      string = String.new
+      c = s.child
+      while c != nil do
+        string += c.to_s
+        c = c.next
+      end
+
+      p.add %Q{<textarea cols="80" rows="#{string.count("\n")}">#{string}</textarea>}
+    end
 
     [200, {"Content-Type" => "text/html"}, p.generate]
   end

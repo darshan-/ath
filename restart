@@ -1,0 +1,10 @@
+#!/bin/bash
+
+./stop
+
+if [ "$?" -ne 0 ]
+then
+    echo "$0: could not stop your app; starting a new one anyway"
+fi
+
+./start

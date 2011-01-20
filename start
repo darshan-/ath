@@ -1,0 +1,25 @@
+#!/bin/bash
+
+if [ -e run/pid ]
+then
+    echo "$0: I won't start, because run/pid exists"
+    exit 1
+fi
+
+ruby ath.rb & >run/log
+pid=$!
+
+sleep 1
+
+ps -A | grep $pid >/dev/null
+
+if [ "$?" -ne 0 ]
+then
+    echo "$0: ath.rb seems to have exited"
+    exit 2
+fi
+
+echo $pid >run/pid
+
+sudo chgrp nginx /tmp/ath.sock
+#chmod 777 /tmp/ath.sock

@@ -1,0 +1,18 @@
+#!/bin/bash
+
+if [ ! -e run/pid ]
+then
+    echo "$0: warning: run/pid does not exist"
+fi
+
+pid=`cat run/pid`
+
+kill $pid >run/log
+
+if [ "$?" -ne 0 ]
+then
+    echo "$0: warning: could not kill $pid"
+fi
+
+rm run/pid
+rm /tmp/ath.sock

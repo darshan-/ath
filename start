@@ -22,4 +22,4 @@ fi
 echo $pid >run/pid
 
 sudo chgrp nginx /tmp/ath.sock
-#chmod 777 /tmp/ath.sock
+chmod 770 /tmp/ath.sock

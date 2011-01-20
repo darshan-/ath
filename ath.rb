@@ -1,16 +1,17 @@
 require 'rubygems'
 require 'rack'
 require 'cgi'
-require 'dsts'
 require 'fcgi.rb'
 require 'nokogiri'
-require 'rexml/document'
+require 'dsts.rb'
 
 class AndroidTranslationHelper
   def call(env)
     @t = Time.now
 
     @env = env
+    @gecko =  @env['HTTP_USER_AGENT'].match(/gecko/i) &&   # No look-behind in ruby 1.8 :(
+             !@env['HTTP_USER_AGENT'].match(/like gecko/i) #  so we need two regexps
 
     # REQUEST_URI is still encoded; split before decoding to allow encoded slashes
     @path = env['REQUEST_URI'].split('/')
@@ -36,7 +37,7 @@ class AndroidTranslationHelper
       [200, {"Content-Type" => "text/plain"}, File.new(__FILE__).read]
     elsif @path[0] == "strings" then
       if m == "POST" then
-        post_strings_n()
+        post_strings()
       else
         show_upload_form()
       end
@@ -87,7 +88,7 @@ class AndroidTranslationHelper
     [200, {"Content-Type" => "text/html"}, p.generate]
   end
 
-  def post_strings_r
+  def post_strings
     p = XhtmlPage.new
 
     req = Rack::Request.new(@env)
@@ -95,42 +96,11 @@ class AndroidTranslationHelper
     content_type = req.params['file'][:type]
     file_contents = req.params['file'][:tempfile].read()
 
-    if content_type != 'text/xml' then
+    if content_type != 'text/xml' and content_type != 'application/xml' then
       p.add "<p>Sorry, that file is <code>#{content_type}</code>, not <code>text/xml</code></p>"
       return [200, {"Content-Type" => "text/html"}, p.generate]
     end
 
-    #require 'rexml/document'
-    doc = REXML::Document.new(file_contents)
-    doc.elements.each('//string') do |s|
-      p.add "<hr><b>#{s.attributes['name']}</b><br />\n"
-
-      string = String.new
-      s.each_child do |c|
-        string += c.to_s
-      end
-
-      p.add %Q{<textarea cols="80" rows="#{string.count("\n")}">#{string}</textarea>}
-    end
-
-    p.title = "#{Time.now - @t} seconds"
-    [200, {"Content-Type" => "text/html"}, p.generate]
-  end
-
-  def post_strings_n
-    p = XhtmlPage.new
-
-    req = Rack::Request.new(@env)
-    filename = req.params['file'][:filename]
-    content_type = req.params['file'][:type]
-    file_contents = req.params['file'][:tempfile].read()
-
-    if content_type != 'text/xml' then
-      p.add "<p>Sorry, that file is <code>#{content_type}</code>, not <code>text/xml</code></p>"
-      return [200, {"Content-Type" => "text/html"}, p.generate]
-    end
-
-    #require 'nokogiri'
     doc = Nokogiri::XML(file_contents)
     doc.xpath('//string').each do |s|
       p.add "<hr><b>#{s.attr('name')}</b><br />\n"
@@ -142,7 +112,31 @@ class AndroidTranslationHelper
         c = c.next
       end
 
-      p.add %Q{<textarea cols="80" rows="#{string.count("\n")}">#{string}</textarea>}
+      s2 = string.dup
+      string = s2.gsub(/(\s+)/, " ").strip
+
+      cols = 80
+      rows = string.length / cols + 1
+      single_line = (rows == 1)
+
+      #if @gecko then
+      #  cols -= 1
+      #  rows -= 1
+      #end
+
+      if @gecko then
+        gecko_hack = %Q{style="height:#{rows * 1.3}em;"}
+      else
+        gecko_hack = ""
+      end
+
+      p.add %Q{<textarea cols="#{cols}" rows="#{rows}" #{gecko_hack}>#{string}</textarea>}
+
+      #if single_line then
+      #  p.add %Q{<input size="#{cols}" value="#{string}" />}
+      #else
+      #  p.add %Q{<textarea cols="#{cols}" rows="#{rows}">#{string}</textarea>}
+      #end
     end
 
     p.title = "#{Time.now - @t} seconds"

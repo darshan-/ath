@@ -1,12 +1,12 @@
 require 'rubygems'
+#load 'fcgi.rb'
 require 'rack'
 require 'cgi'
-require 'fcgi.rb'
 require 'nokogiri'
-require 'dsts.rb'
+load 'dsts.rb'
 
 class AndroidTranslationHelper
-  def init
+  def initialize()
     @en_strings_xml = File.new('strings.xml').read
   end
 
@@ -243,7 +243,4 @@ class AndroidTranslationHelper
   end
 end
 
-ath = AndroidTranslationHelper.new()
-ath.init()
-
-Rack::Handler::FastCGI.run(ath, :File => '/tmp/ath.sock')
+Rack::Handler::FastCGI.run(AndroidTranslationHelper.new(), :File => '/tmp/ath.sock')

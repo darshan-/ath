@@ -6,6 +6,10 @@ require 'nokogiri'
 require 'dsts.rb'
 
 class AndroidTranslationHelper
+  def init
+    @en_strings_xml = File.new('strings.xml').read
+  end
+
   def call(env)
     @t = Time.now
 
@@ -41,6 +45,8 @@ class AndroidTranslationHelper
       else
         show_upload_form()
       end
+    elsif @path[0] == "show_strings" then
+      show_strings()
     else
       default()
     end
@@ -102,6 +108,7 @@ class AndroidTranslationHelper
     end
 
     doc = Nokogiri::XML(file_contents)
+
     doc.xpath('//string').each do |s|
       p.add "<hr><b>#{s.attr('name')}</b><br />\n"
 
@@ -117,12 +124,6 @@ class AndroidTranslationHelper
 
       cols = 80
       rows = string.length / cols + 1
-      single_line = (rows == 1)
-
-      #if @gecko then
-      #  cols -= 1
-      #  rows -= 1
-      #end
 
       if @gecko then
         gecko_hack = %Q{style="height:#{rows * 1.3}em;"}
@@ -131,12 +132,98 @@ class AndroidTranslationHelper
       end
 
       p.add %Q{<textarea cols="#{cols}" rows="#{rows}" #{gecko_hack}>#{string}</textarea>}
+    end
 
-      #if single_line then
-      #  p.add %Q{<input size="#{cols}" value="#{string}" />}
-      #else
-      #  p.add %Q{<textarea cols="#{cols}" rows="#{rows}">#{string}</textarea>}
-      #end
+    doc.xpath('//string-array').each do |sa|
+      i = 0
+      sa.element_children.each do |item|
+        p.add "<hr><b>#{sa.attr('name')}[#{i}]</b><br />\n"
+        i += 1
+
+        string = String.new
+        c = item.child
+        while c != nil do
+          string += c.to_s
+          c = c.next
+        end
+
+        #s2 = string.dup
+        #string = s2.gsub(/(\s+)/, " ").strip
+
+        cols = 80
+        rows = string.length / cols + 1
+
+        if @gecko then
+          gecko_hack = %Q{style="height:#{rows * 1.3}em;"}
+        else
+          gecko_hack = ""
+        end
+
+        p.add %Q{<textarea cols="#{cols}" rows="#{rows}" #{gecko_hack}>#{string}</textarea>\n}
+      end
+    end
+
+    p.title = "#{Time.now - @t} seconds"
+    [200, {"Content-Type" => "text/html"}, p.generate]
+  end
+
+  def show_strings
+    p = XhtmlPage.new
+
+    doc = Nokogiri::XML(@en_strings_xml)
+
+    doc.xpath('//string').each do |s|
+      p.add "<hr><b>#{s.attr('name')}</b><br />\n"
+
+      string = String.new
+      c = s.child
+      while c != nil do
+        string += c.to_s
+        c = c.next
+      end
+
+      s2 = string.dup
+      string = s2.gsub(/(\s+)/, " ").strip
+
+      cols = 80
+      rows = string.length / cols + 1
+
+      if @gecko then
+        gecko_hack = %Q{style="height:#{rows * 1.3}em;"}
+      else
+        gecko_hack = ""
+      end
+
+      p.add %Q{<textarea cols="#{cols}" rows="#{rows}" #{gecko_hack}>#{string}</textarea>}
+    end
+
+    doc.xpath('//string-array').each do |sa|
+      i = 0
+      sa.element_children.each do |item|
+        p.add "<hr><b>#{sa.attr('name')}[#{i}]</b><br />\n"
+        i += 1
+
+        string = String.new
+        c = item.child
+        while c != nil do
+          string += c.to_s
+          c = c.next
+        end
+
+        #s2 = string.dup
+        #string = s2.gsub(/(\s+)/, " ").strip
+
+        cols = 80
+        rows = string.length / cols + 1
+
+        if @gecko then
+          gecko_hack = %Q{style="height:#{rows * 1.3}em;"}
+        else
+          gecko_hack = ""
+        end
+
+        p.add %Q{<textarea cols="#{cols}" rows="#{rows}" #{gecko_hack}>#{string}</textarea>\n}
+      end
     end
 
     p.title = "#{Time.now - @t} seconds"
@@ -156,4 +243,7 @@ class AndroidTranslationHelper
   end
 end
 
-Rack::Handler::FastCGI.run(AndroidTranslationHelper.new, :File => '/tmp/ath.sock')
+ath = AndroidTranslationHelper.new()
+ath.init()
+
+Rack::Handler::FastCGI.run(ath, :File => '/tmp/ath.sock')

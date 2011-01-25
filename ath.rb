@@ -8,6 +8,7 @@ load 'dsts.rb'
 class AndroidTranslationHelper
   def initialize()
     @en_strings_xml = File.new('strings.xml').read
+    cache_strings()
   end
 
   def call(env)
@@ -47,6 +48,8 @@ class AndroidTranslationHelper
       end
     elsif @path[0] == "show_strings" then
       show_strings()
+    elsif @path[0] == "show_cached_strings" then
+      show_cached_strings()
     else
       default()
     end
@@ -228,6 +231,85 @@ class AndroidTranslationHelper
 
     p.title = "#{Time.now - @t} seconds"
     [200, {"Content-Type" => "text/html"}, p.generate]
+  end
+
+  def show_cached_strings
+    p = XhtmlPage.new
+
+    @strings.each do |name, string|
+      p.add "<hr><b>#{name}</b><br />\n"
+
+      cols = 80
+      rows = string.length / cols + 1
+
+      if @gecko then
+        gecko_hack = %Q{style="height:#{rows * 1.3}em;"}
+      else
+        gecko_hack = ""
+      end
+
+      p.add %Q{<textarea cols="#{cols}" rows="#{rows}" #{gecko_hack}>#{string}</textarea>}
+    end
+
+    @str_ars.each do |name, a|
+      i = 0
+      a.each do |string|
+        p.add "<hr><b>#{name}[#{i}]</b><br />\n"
+        i += 1
+
+        cols = 80
+        rows = string.length / cols + 1
+
+        if @gecko then
+          gecko_hack = %Q{style="height:#{rows * 1.3}em;"}
+        else
+          gecko_hack = ""
+        end
+
+        p.add %Q{<textarea cols="#{cols}" rows="#{rows}" #{gecko_hack}>#{string}</textarea>\n}
+      end
+    end
+
+    p.title = "#{Time.now - @t} seconds"
+    [200, {"Content-Type" => "text/html"}, p.generate]
+  end
+
+  def cache_strings
+    @strings = Hash.new()
+    @str_ars = Hash.new()
+
+    doc = Nokogiri::XML(@en_strings_xml)
+
+    doc.xpath('//string').each do |s|
+      string = String.new
+      c = s.child
+      while c != nil do
+        string += c.to_s
+        c = c.next
+      end
+
+      s2 = string.dup
+      string = s2.gsub(/(\s+)/, " ").strip
+
+      @strings[s.attr('name')] = string
+    end
+
+    doc.xpath('//string-array').each do |sa|
+      @str_ars[sa.attr('name')] = Array.new()
+
+      i = 0
+      sa.element_children.each do |item|
+        string = String.new
+        c = item.child
+        while c != nil do
+          string += c.to_s
+          c = c.next
+        end
+
+        @str_ars[sa.attr('name')][i] = string
+        i += 1
+      end
+    end
   end
 
   def dump_env

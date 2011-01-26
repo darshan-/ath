@@ -1,8 +1,8 @@
 #!/bin/bash
 
-if [ -e run/pid ]
+if [ -e run/pid* ]
 then
-    echo "$0: I won't start, because run/pid exists"
+    echo "$0: I won't start, because run/pid* exists"
     exit 1
 fi
 
@@ -21,5 +21,5 @@ fi
 
 echo $pid >run/pid
 
-sudo chgrp nginx /tmp/ath.sock
-chmod 770 /tmp/ath.sock
+sudo chgrp nginx /tmp/ath.sock*
+chmod 770 /tmp/ath.sock*

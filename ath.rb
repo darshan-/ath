@@ -270,7 +270,7 @@ class AndroidTranslationHelper
       end
     end
 
-    p.title = "#{Time.now - @t} seconds"
+    #p.title = "#{Time.now - @t} seconds"
     [200, {"Content-Type" => "text/html"}, p.generate]
   end
 
@@ -325,4 +325,9 @@ class AndroidTranslationHelper
   end
 end
 
-Rack::Handler::FastCGI.run(AndroidTranslationHelper.new(), :File => '/tmp/ath.sock')
+socket_name = '/tmp/ath.sock'
+
+i = ARGV[0].to_i
+socket_name += "-#{i}" if i > 0
+
+Rack::Handler::FastCGI.run(AndroidTranslationHelper.new(), :File => socket_name)

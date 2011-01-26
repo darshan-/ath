@@ -8,7 +8,7 @@ fi
 
 pid=`cat run/pid`
 
-kill $pid >run/log
+kill $pid >>run/log
 
 if [ "$?" -ne 0 ]
 then
@@ -17,4 +17,4 @@ then
 fi
 
 rm run/pid
-rm /tmp/ath.sock
+rm /tmp/ath.sock*

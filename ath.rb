@@ -1,5 +1,4 @@
 require 'rubygems'
-#require 'fcgi'
 require 'rack'
 require 'cgi'
 require 'nokogiri'
@@ -325,10 +324,8 @@ class AndroidTranslationHelper
   end
 end
 
-socket_name = '/tmp/ath.sock'
-
+port = 8080
 i = ARGV[0].to_i
-socket_name += "-#{i}" if i > 0
+port += i if i > 0
 
-#Rack::Handler::FastCGI.run(AndroidTranslationHelper.new(), :File => socket_name)
-Rack::Handler::Thin.run(AndroidTranslationHelper.new())
+Rack::Handler::Thin.run(AndroidTranslationHelper.new(), :Host => '127.0.0.1', :Port => port)

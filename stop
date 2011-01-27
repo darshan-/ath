@@ -17,4 +17,4 @@ then
 fi
 
 rm run/pid
-rm /tmp/ath.sock*
+#rm /tmp/ath.sock*

@@ -146,22 +146,13 @@ class AndroidTranslationHelper
       h = {}
       s = ''
 
-      # Doesn't account for word-wrapping, but gets plenty close for now
+      # Doesn't account for words that don't fit at the end starting new lines, but gets plenty close for now
       count_rows = lambda do |s|
         col = 1
         row = 1
 
         s.each_char do |c|
-          if c == "\n" then
-            puts "NL(#{row})"
-            col = 1
-            row += 1
-            next
-          end
-          print c
-
-          if col > TA_COLS then
-            puts "80(#{row})"
+          if c == "\n" or col > TA_COLS then
             col = 1
             row += 1
             next
@@ -170,7 +161,6 @@ class AndroidTranslationHelper
           col += 1
         end
 
-        puts "(#{row})\n-----------------"
         row
       end
 
@@ -182,12 +172,16 @@ class AndroidTranslationHelper
         c = c.next
       end
       
+      s = s.dup.gsub(/\s*\\n\s*/, '\n').gsub(/\s+/, ' ').gsub(/\\n/, "\\n\n").gsub(/\\("|')/, '\1').strip
+
       if s[0] == '"' and s[s.length-1] == '"' then
         h[:quoted] = true
         s = s[1, s.length-2]
-      end
 
-      s = s.dup.gsub(/(\s+)/, ' ').gsub(/\\n\ \\n/, "\\n\\n").gsub(/\\n/, "\\n\n").strip
+        # It was quoted, so opening and trailing spaces are important. Let's make underscores represent
+        #  spaces to make the intention more obvious.
+        s = s.dup.gsub(/\A( +)/){'_' * $&.length}.gsub(/( +)\Z/){'_' * $&.length}
+      end
 
       h[:string] = s
       h[:rows] = count_rows.call(s)

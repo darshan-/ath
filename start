@@ -6,7 +6,7 @@ then
     exit 1
 fi
 
-ruby ath.rb & >run/log
+ruby run.rb & >run/log
 pid=$!
 
 sleep 1
@@ -15,7 +15,7 @@ ps -A | grep $pid >/dev/null
 
 if [ "$?" -ne 0 ]
 then
-    echo "$0: ath.rb seems to have exited"
+    echo "$0: run.rb seems to have exited"
     exit 2
 fi
 

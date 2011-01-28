@@ -7,7 +7,7 @@ fi
 
 pid=`cat run/pid`
 
-kill $pid >run/log
+kill $pid >>run/log
 
 if [ "$?" -ne 0 ]
 then

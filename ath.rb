@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 require 'cgi'
 require 'nokogiri'
 require './dsts.rb'
@@ -37,17 +38,17 @@ class AndroidTranslationHelper
   def route
     m = @env['REQUEST_METHOD']
 
-    if m == "GET" and @path.empty? then
+    if @path.empty? then
       home()
-    elsif m == "GET" and @path[0] == "keepalive" then
+    elsif @path[0] == "keepalive" then
       keepalive()
-    elsif m == "GET" and @path[0] == "__FILE__" then
-      [200, {"Content-Type" => "text/plain"}, File.new(__FILE__).read]
+    #elsif @path[0] == "__FILE__" then
+    #  [200, {"Content-Type" => "text/plain"}, File.new(__FILE__).read]
     elsif m == "POST" and @path[0] == "post_strings" then
       post_strings()
-    elsif m == "GET" and @path[0] == "upload_strings" then
+    elsif @path[0] == "upload_strings" then
       show_upload_form()
-    elsif m == "GET" and @path[0] == "show_cached_strings" then
+    elsif @path[0] == "show_cached_strings" then
       show_cached_strings()
     else
       default()
@@ -106,13 +107,12 @@ class AndroidTranslationHelper
   def show_cached_strings
     p = XhtmlPage.new
 
-    add_string = lambda do |name, string|
+    add_string = lambda do |name, hash|
       p.add "<hr><b>#{name}</b><br />\n"
 
       cols = 80
-      rows = string.length / cols + 1
-
-      rows += (string.count("\n") + string.match(/\n\n/).length) / 2
+      rows = hash[:rows]
+      string = hash[:string]
 
       if @gecko then
         gecko_hack = %Q{style="height:#{rows * 1.3}em;"}
@@ -123,14 +123,14 @@ class AndroidTranslationHelper
       p.add %Q{<textarea cols="#{cols}" rows="#{rows}" #{gecko_hack}>#{string}</textarea>}
     end
 
-    @strings.each do |name, string|
-      add_string.call(name, string)
+    @strings.each do |name, hash|
+      add_string.call(name, hash)
     end
 
-    @str_ars.each do |name, a|
+    @str_ars.each do |name, array|
       i = 0
-      a.each do |string|
-        add_string.call(name + "[#{i}]", string)
+      array.each do |hash|
+        add_string.call(name + "[#{i}]", hash)
         i += 1
       end
     end
@@ -139,39 +139,79 @@ class AndroidTranslationHelper
   end
 
   def cache_strings
-    @strings = Hash.new()
-    @str_ars = Hash.new()
+    @strings = {}
+    @str_ars = {}
+
+    parse_string = lambda do |element|
+      h = {}
+      s = ''
+
+      # Doesn't account for word-wrapping, but gets plenty close for now
+      count_rows = lambda do |s|
+        col = 1
+        row = 1
+
+        s.each_char do |c|
+          if c == "\n" then
+            puts "NL(#{row})"
+            col = 1
+            row += 1
+            next
+          end
+          print c
+
+          if col > TA_COLS then
+            puts "80(#{row})"
+            col = 1
+            row += 1
+            next
+          end
+
+          col += 1
+        end
+
+        puts "(#{row})\n-----------------"
+        row
+      end
+
+      # element.text strips HTML like <b> and/or <i> that we want to keep, so we loop over the children
+      #  taking each child's to_s to preserve them.  Unfortunately, this also converts '•' to '&#x2022;',
+      #  which we correct below.  You'll have to keep your eye out for other troublesome characters.
+      c = element.child
+      while c != nil do
+        s += c.to_s
+        c = c.next
+      end
+      
+      if s[0] == '"' and s[s.length-1] == '"' then
+        h[:quoted] = true
+        s = s[1, s.length-2]
+      end
+
+      s = s.dup.gsub(/(\s+)/, ' ').gsub(/\\n\ \\n/, "\\n\\n").gsub(/\\n/, "\\n\n").gsub(/&#x2022;/, '•').strip
+
+      h[:string] = s
+      h[:rows] = count_rows.call(s)
+
+      h
+    end
 
     doc = Nokogiri::XML(@en_strings_xml)
 
-    doc.xpath('//string').each do |s|
-      string = String.new
-      c = s.child
-      while c != nil do
-        string += c.to_s
-        c = c.next
-      end
+    doc.xpath('//string').each do |str_el|
+      h = parse_string.call(str_el)
 
-      s2 = string.dup
-      #string = s2.gsub(/(\s+)/, " ").strip
-      string = s2.gsub(/(\s+)/, " ").gsub(/\\n\ \\n/, "\\n\\n").gsub(/\\n/, "\\n\n").strip
-
-      @strings[s.attr('name')] = string
+      @strings[str_el.attr('name')] = h
     end
 
-    doc.xpath('//string-array').each do |sa|
-      @str_ars[sa.attr('name')] = Array.new()
+    doc.xpath('//string-array').each do |sa_el|
+      @str_ars[sa_el.attr('name')] = Array.new()
 
       i = 0
-      sa.element_children.each do |item|
-        string = String.new
-        c = item.child
-        while c != nil do
-          string += c.to_s
-          c = c.next
-        end
+      sa_el.element_children.each do |item_el|
+        h = parse_string.call(item_el)
 
-        @str_ars[sa.attr('name')][i] = string
+        @str_ars[sa_el.attr('name')][i] = h
         i += 1
       end
     end

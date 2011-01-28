@@ -108,7 +108,7 @@ class AndroidTranslationHelper
     p = XhtmlPage.new
 
     add_string = lambda do |name, hash|
-      p.add "<hr><b>#{name}</b><br />\n"
+      p.add "<hr><b>#{name}#{'*' if hash[:quoted]}</b><br />\n"
 
       cols = 80
       rows = hash[:rows]
@@ -121,6 +121,10 @@ class AndroidTranslationHelper
       end
 
       p.add %Q{<textarea cols="#{cols}" rows="#{rows}" #{gecko_hack}>#{string}</textarea>}
+
+      if hash[:quoted] then
+        p.add %Q{<br />*<i>Spaces at the beginning and/or and of this one are important.</i> <b>Be sure to match the original!</b>}
+      end
     end
 
     @strings.each do |name, hash|
@@ -177,10 +181,6 @@ class AndroidTranslationHelper
       if s[0] == '"' and s[s.length-1] == '"' then
         h[:quoted] = true
         s = s[1, s.length-2]
-
-        # It was quoted, so opening and trailing spaces are important. Let's make underscores represent
-        #  spaces to make the intention more obvious.
-        s = s.dup.gsub(/\A( +)/){'_' * $&.length}.gsub(/( +)\Z/){'_' * $&.length}
       end
 
       h[:string] = s

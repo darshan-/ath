@@ -175,11 +175,10 @@ class AndroidTranslationHelper
       end
 
       # element.text strips HTML like <b> and/or <i> that we want to keep, so we loop over the children
-      #  taking each child's to_s to preserve them.  Unfortunately, this also converts '•' to '&#x2022;',
-      #  which we correct below.  You'll have to keep your eye out for other troublesome characters.
+      #  taking each child's to_xml to preserve them.
       c = element.child
       while c != nil do
-        s += c.to_s
+        s += c.to_xml(:encoding => 'utf-8')
         c = c.next
       end
       
@@ -188,7 +187,7 @@ class AndroidTranslationHelper
         s = s[1, s.length-2]
       end
 
-      s = s.dup.gsub(/(\s+)/, ' ').gsub(/\\n\ \\n/, "\\n\\n").gsub(/\\n/, "\\n\n").gsub(/&#x2022;/, '•').strip
+      s = s.dup.gsub(/(\s+)/, ' ').gsub(/\\n\ \\n/, "\\n\\n").gsub(/\\n/, "\\n\n").strip
 
       h[:string] = s
       h[:rows] = count_rows.call(s)

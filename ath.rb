@@ -112,8 +112,8 @@ class AndroidTranslationHelper
         gecko_hack = ""
       end
 
-      p.add %Q{en:<textarea cols="#{cols}" rows="#{rows}" #{gecko_hack}>#{string}</textarea><br />}
-      p.add %Q{es:<textarea cols="#{cols}" rows="#{rows}" #{gecko_hack}></textarea>}
+      p.add %Q{en:<br /><textarea cols="#{cols}" rows="#{rows}" #{gecko_hack}>#{string}</textarea><br />}
+      p.add %Q{es:<br /><textarea cols="#{cols}" rows="#{rows}" #{gecko_hack}></textarea>}
 
       if hash[:quoted] then
         p.add %Q{<br />*<i>Spaces at the beginning and/or and of this one are important.</i> <b>Be sure to match the original!</b>}

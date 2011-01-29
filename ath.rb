@@ -3,12 +3,6 @@ require 'cgi'
 require 'nokogiri'
 require './dsts.rb'
 
-class NilClass
-  def length
-    0
-  end
-end
-
 # How many columns to use for the strings' textareas
 TA_COLS = 80
 
@@ -40,8 +34,6 @@ class AndroidTranslationHelper
 
     if @path.empty? then
       home()
-    elsif @path[0] == "keepalive" then
-      keepalive()
     #elsif @path[0] == "__FILE__" then
     #  [200, {"Content-Type" => "text/plain"}, File.new(__FILE__).read]
     elsif m == "POST" and @path[0] == "post_strings" then
@@ -110,7 +102,7 @@ class AndroidTranslationHelper
     add_string = lambda do |name, hash|
       p.add "<hr><b>#{name}#{'*' if hash[:quoted]}</b><br />\n"
 
-      cols = 80
+      cols = TA_COLS
       rows = hash[:rows]
       string = hash[:string]
 
@@ -120,7 +112,8 @@ class AndroidTranslationHelper
         gecko_hack = ""
       end
 
-      p.add %Q{<textarea cols="#{cols}" rows="#{rows}" #{gecko_hack}>#{string}</textarea>}
+      p.add %Q{en:<textarea cols="#{cols}" rows="#{rows}" #{gecko_hack}>#{string}</textarea><br />}
+      p.add %Q{es:<textarea cols="#{cols}" rows="#{rows}" #{gecko_hack}></textarea>}
 
       if hash[:quoted] then
         p.add %Q{<br />*<i>Spaces at the beginning and/or and of this one are important.</i> <b>Be sure to match the original!</b>}

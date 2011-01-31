@@ -3,6 +3,9 @@
 require 'rack'
 require './ath.rb'
 
+BASE_PORT = 8080
+MAX_SERVERS = 6
+
 stdout = $stdout
 $stdout = File.new('run/log', 'a')
 
@@ -10,9 +13,6 @@ if not Dir.glob('run/pid*').empty? then
   stdout.puts "Error: some run/pid* exists"
   exit 1
 end
-
-BASE_PORT = 8080
-MAX_SERVERS = 6
 
 port = BASE_PORT
 
@@ -32,17 +32,21 @@ while servers > 0
   fork do
     stdout.puts "Starting server on port #{port} with PID #{$$}"
 
-    pid_file = File.new('run/pid' << (port - BASE_PORT).to_s, 'w')
-    pid_file.puts $$
-    pid_file.close()
+    #pid_file = File.new('run/pid' << (port - BASE_PORT).to_s, 'w')
+    #pid_file.puts $$
+    #pid_file.close()
+    
+    File.open('run/pid' << (port - BASE_PORT).to_s, 'w') do |file|
+      file.puts $$
+    end
     
     Rack::Handler::Thin.run(AndroidTranslationHelper.new(), :Host => '127.0.0.1', :Port => port)
   end
 
-  sleep 0.005
+  sleep 0.01
 
   port += 1
   servers -= 1
 end
 
-sleep 0.005
+sleep 0.01

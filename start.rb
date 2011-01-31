@@ -39,10 +39,10 @@ while servers > 0
     Rack::Handler::Thin.run(AndroidTranslationHelper.new(), :Host => '127.0.0.1', :Port => port)
   end
 
-  sleep 0.01
+  sleep 0.005
 
   port += 1
   servers -= 1
 end
 
-sleep 0.01
+sleep 0.005

@@ -1,10 +1,15 @@
 #!/bin/bash
 
-./stop
+PID_FILE='./run/pid'
 
-if [ "$?" -ne 0 ]
+if [ ! -e $PID_FILE ]
 then
-    echo "$0: could not stop your app; starting a new one anyway"
+    echo "Error: $PID_FILE does not exist"
+    exit 1
 fi
 
-./start
+servers=`wc $PID_FILE | awk '{print $1;}'`
+
+./stop
+
+./start $servers

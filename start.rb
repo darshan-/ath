@@ -5,12 +5,14 @@ require './ath.rb'
 
 BASE_PORT = 8080
 MAX_SERVERS = 6
+LOG_FILE = './run/log'
+PID_FILE = './run/pid'
 
 stdout = $stdout
-$stdout = File.new('run/log', 'a')
+$stdout = File.open(LOG_FILE, 'a')
 
-if not Dir.glob('run/pid*').empty? then
-  stdout.puts "Error: some run/pid* exists"
+if File.exists?(PID_FILE) then
+  stdout.puts "Error: #{PID_FILE} exists"
   exit 1
 end
 
@@ -32,11 +34,7 @@ while servers > 0
   fork do
     stdout.puts "Starting server on port #{port} with PID #{$$}"
 
-    #pid_file = File.new('run/pid' << (port - BASE_PORT).to_s, 'w')
-    #pid_file.puts $$
-    #pid_file.close()
-    
-    File.open('run/pid' << (port - BASE_PORT).to_s, 'w') do |file|
+    File.open(PID_FILE, 'a') do |file|
       file.puts $$
     end
     

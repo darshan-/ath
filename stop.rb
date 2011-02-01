@@ -1,21 +1,18 @@
 #!/usr/bin/env ruby
 
-pid_files = Dir.glob('run/pid*')
+PID_FILE = './run/pid'
 
-if pid_files.empty? then
-  puts "Error: no run/pid* exists"
+if not File.exists?(PID_FILE) then
+  puts "Error: #{PID_FILE} does not exist"
   exit 1
 end
 
-pid_files.each do |file_name|
-  f = File.open(file_name, 'r')
-  pid = f.gets.strip
-  f.close()
-
-  puts "Stopping server with PID #{pid}"
-  system("kill #{pid}")
-
-  File.delete(file_name)
+File.open(PID_FILE, 'r') do |file|
+  file.each_line do |line|
+    pid = line.strip()
+    puts "Stopping server with PID #{pid}"
+    system("kill #{pid}")
+  end
 end
-
-#system('rm run/pid*')
+    
+File.delete(PID_FILE)

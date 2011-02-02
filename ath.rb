@@ -53,7 +53,7 @@ class AndroidTranslationHelper
 
     p.title = "#{path}"
     p.add "<p><b>Path:</b> #{path}</p>"
-    p.add "<div>" + dump_env() + "</div>"
+    p.add "<div>" << dump_env() << "</div>"
 
     [200, {"Content-Type" => "text/html"}, p.generate]
   end
@@ -116,7 +116,7 @@ class AndroidTranslationHelper
       p.add %Q{es:<br /><textarea cols="#{cols}" rows="#{rows}" #{gecko_hack}></textarea>}
 
       if hash[:quoted] then
-        p.add %Q{<br />*<i>Spaces at the beginning and/or and of this one are important.</i> <b>Be sure to match the original!</b>}
+        p.add %Q{<br />*<i>Spaces at the beginning and/or end of this one are important.</i> <b>Be sure to match the original!</b>}
       end
     end
 
@@ -162,14 +162,14 @@ class AndroidTranslationHelper
       end
 
       # element.text strips HTML like <b> and/or <i> that we want to keep, so we loop over the children
-      #  taking each child's to_xml to preserve them.
-      c = element.child
-      while c != nil do
-        s += c.to_xml(:encoding => 'utf-8')
-        c = c.next
+      #  taking each child's to_xml to preserve them.  Manually setting encoding seems to be necessary
+      #  to preserve multi-byte characters.
+      element.children.each do |c|
+        s << c.to_xml(:encoding => 'utf-8')
       end
-      
-      s = s.dup.gsub(/\s*\\n\s*/, '\n').gsub(/\s+/, ' ').gsub(/\\n/, "\\n\n").gsub(/\\("|')/, '\1').strip
+
+      # gsub! returns nil if there is no match, so it's no good for chaining unless you know you always match
+      s = s.gsub(/\s*\\n\s*/, '\n').gsub(/\s+/, ' ').gsub(/\\n/, "\\n\n").gsub(/\\("|')/, '\1').strip
 
       if s[0] == '"' and s[s.length-1] == '"' then
         h[:quoted] = true
@@ -206,7 +206,7 @@ class AndroidTranslationHelper
   def dump_env
     s = String.new
 
-    s << "<hr />\n<p><i>" + Time.new.to_s + "</i></p>\n"
+    s << "<hr />\n<p><i>" << Time.new.to_s << "</i></p>\n"
     s << "<br />\nEnvironment:<br />\n"
     @env.each do |key, value|
       s << "* #{key} =&gt; #{CGI.escapeHTML(value.to_s)}<br />\n"

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-require 'cgi'
 require 'nokogiri'
+require 'cgi'
+require './s3storage.rb'
 require './dsts.rb'
 
 # How many columns to use for the strings' textareas
@@ -8,7 +9,9 @@ TA_COLS = 80
 
 class AndroidTranslationHelper
   def initialize()
-    @en_strings_xml = File.new('strings.xml').read
+    @storage = S3Storage.new()
+    #@en_strings_xml = File.new('strings.xml').read
+    @en_strings_xml = @storage.get_strings('en')
     cache_strings()
   end
 

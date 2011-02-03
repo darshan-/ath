@@ -37,8 +37,6 @@ class AndroidTranslationHelper
 
     if @path.empty? then
       home()
-    elsif @path[0] == 'show_cached_strings' then
-      show_cached_strings()
     elsif @path[0] == 'translate_to'
       show_translate_form(@path[1])
     else

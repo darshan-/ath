@@ -14,7 +14,7 @@ class S3Storage
   end
 
   def get_strings(lang)
-    AWS::S3::Bucket.find('ath-bi-strings').objects(:prefix => lang).last.value(:reload)
+    AWS::S3::Bucket.find('ath-bi-strings').objects(:prefix => lang).last.value()
   end
 
   def put_strings(lang, strings_xml)

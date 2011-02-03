@@ -2,14 +2,14 @@ require 'aws/s3'
 require './secret.rb'
 
 class NilClass
-  def value;    self end
-  def key;      self end
-  def next;     self end
+  def value()   self end
+  def key()     self end
+  def next()    self end
   def [](*args) self end
 end
 
 class S3Storage
-  def initialize
+  def initialize()
     AWS::S3::Base.establish_connection!(:access_key_id     => Secret::ACCESS_KEY_ID,
                                         :secret_access_key => Secret::SECRET_ACCESS_KEY)
   end

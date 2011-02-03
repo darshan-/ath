@@ -5,9 +5,9 @@ require './s3storage.rb'
 require './language.rb'
 require './dsts.rb'
 
-TA_COLS = 80 # How many columns to use for the strings' textareas
-
 class AndroidTranslationHelper
+  TA_COLS = 80 # How many columns to use for the strings' textareas
+
   def initialize()
     @storage = S3Storage.new()
     @strings = {}
@@ -74,28 +74,30 @@ class AndroidTranslationHelper
       return [404, {'Content-Type' => 'text/plain'}, '404 - Not Found'] if @strings[other_lang].nil?
     end
 
-    p = XhtmlPage.new
-    p.title = 'translating'
+    p = XhtmlPage.new()
+    p.title = "Translate to #{Language::Languages[other_lang]}"
 
-    add_string = lambda do |name, en_hash, other_hash|
+    add_string = lambda do |name, en_hash, xx_hash|
       p.add "<hr><b>#{name}#{'*' if en_hash[:quoted]}</b><br />\n"
 
       cols = TA_COLS
-      rows = en_hash[:rows]
+      en_rows = en_hash[:rows]
+      xx_rows = xx_hash[:rows] || en_rows
       en_string = en_hash[:string]
-      other_string = other_hash[:string]
+      xx_string = xx_hash[:string]
 
+      en_gecko_hack = xx_gecko_hack = ""
       if @gecko then
-        gecko_hack = %Q{style="height:#{rows * 1.3}em;"}
-      else
-        gecko_hack = ""
+        en_gecko_hack = %Q{style="height:#{en_rows * 1.3}em;"}
+        xx_gecko_hack = %Q{style="height:#{xx_rows * 1.3}em;"}
       end
 
-      p.add %Q{en:<br /><textarea cols="#{cols}" rows="#{rows}" #{gecko_hack}>#{en_string}</textarea><br />}
-      p.add %Q{#{other_lang}:<br /><textarea cols="#{cols}" rows="#{rows}" #{gecko_hack}>#{other_string}</textarea>}
+      p.add            %Q{en:<br /><textarea cols="#{cols}" rows="#{en_rows}" #{en_gecko_hack}>#{en_string}</textarea><br />}
+      p.add %Q{#{other_lang}:<br /><textarea cols="#{cols}" rows="#{xx_rows}" #{xx_gecko_hack}>#{xx_string}</textarea>}
 
       if en_hash[:quoted] then
-        p.add %Q{<br />*<i>Spaces at the beginning and/or end of this one are important.</i> <b>Be sure to match the original!</b>}
+        p.add %Q{<br />*<i>Spaces at the beginning and/or end of this one are important.</i> }
+        p.add %Q{<b>Be sure to match the original</b> (unless you really should do something different in your language).}
       end
     end
 

@@ -13,8 +13,9 @@ class S3Storage
                                         :secret_access_key => Secret::SECRET_ACCESS_KEY)
   end
 
+
   def get_strings(lang)
-    AWS::S3::Bucket.find('ath-bi-strings').objects(:prefix => lang).last.value()
+    AWS::S3::Bucket.find('ath-bi-strings').objects(:prefix => lang).last.value
   end
 
   def put_strings(lang, strings_xml)

@@ -170,20 +170,14 @@ class AndroidTranslationHelper
     doc = Nokogiri::XML(strings_xml)
 
     doc.xpath('//string').each do |str_el|
-      h = parse_string.call(str_el)
-
-      @strings[lang][str_el.attr('name')] = h
+      @strings[lang][str_el.attr('name')] = parse_string.call(str_el)
     end
 
     doc.xpath('//string-array').each do |sa_el|
-      @str_ars[lang][sa_el.attr('name')] = Array.new()
+      @str_ars[lang][sa_el.attr('name')] = []
 
-      i = 0
-      sa_el.element_children.each do |item_el|
-        h = parse_string.call(item_el)
-
-        @str_ars[lang][sa_el.attr('name')][i] = h
-        i += 1
+      sa_el.element_children.each_with_index do |item_el, i|
+        @str_ars[lang][sa_el.attr('name')][i] = parse_string.call(item_el)
       end
     end
   end

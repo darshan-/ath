@@ -2,17 +2,17 @@
 require 'nokogiri'
 require 'cgi'
 require './s3storage.rb'
+require './language.rb'
 require './dsts.rb'
 
-# How many columns to use for the strings' textareas
-TA_COLS = 80
+TA_COLS = 80 # How many columns to use for the strings' textareas
 
 class AndroidTranslationHelper
   def initialize()
     @storage = S3Storage.new()
-    #@en_strings_xml = File.new('strings.xml').read
-    @en_strings_xml = @storage.get_strings('en')
-    cache_strings()
+    @strings = {}
+    @str_ars = {}
+    cache_strings('en')
   end
 
   def call(env)
@@ -37,14 +37,10 @@ class AndroidTranslationHelper
 
     if @path.empty? then
       home()
-    #elsif @path[0] == "__FILE__" then
-    #  [200, {"Content-Type" => "text/plain"}, File.new(__FILE__).read]
-    elsif m == "POST" and @path[0] == "post_strings" then
-      post_strings()
-    elsif @path[0] == "upload_strings" then
-      show_upload_form()
-    elsif @path[0] == "show_cached_strings" then
+    elsif @path[0] == 'show_cached_strings' then
       show_cached_strings()
+    elsif @path[0] == 'translate_to'
+      show_translate_form(@path[1])
     else
       default()
     end
@@ -70,44 +66,26 @@ class AndroidTranslationHelper
     [200, {"Content-Type" => "text/html"}, p.generate]
   end
 
-  def show_upload_form
-    p = XhtmlPage.new
-
-    p.add %Q{<form method="post" action="/ath/post_strings" enctype="multipart/form-data">}
-    p.add %Q{<input type="file" name="file">}
-    p.add %Q{<input type="submit" value="Submit" /></form>}
-
-    [200, {"Content-Type" => "text/html"}, p.generate]
-  end
-
-  def post_strings
-    req = Rack::Request.new(@env)
-    filename = req.params['file'][:filename]
-    content_type = req.params['file'][:type]
-    file_contents = req.params['file'][:tempfile].read()
-
-    @en_strings_xml = file_contents
-    cache_strings()
-    File.new('strings.xml', 'w').write(file_contents)
-
-    if content_type != 'text/xml' and content_type != 'application/xml' then
-      p = XhtmlPage.new
-      p.add "<p>Sorry, that file is <code>#{content_type}</code>, not <code>text/xml</code></p>"
-      return [200, {"Content-Type" => "text/html"}, p.generate]
+  def show_translate_form(other_lang)
+    if other_lang.nil? then
+      return [404, {'Content-Type' => 'text/plain'}, '404 - Not Found']
     end
 
-    [302, {'Location' => '/ath/show_cached_strings'}, '302 Found']
-  end
+    if @strings[other_lang].nil? then
+      cache_strings(other_lang)
+      return [404, {'Content-Type' => 'text/plain'}, '404 - Not Found'] if @strings[other_lang].nil?
+    end
 
-  def show_cached_strings
     p = XhtmlPage.new
+    p.title = 'translating'
 
-    add_string = lambda do |name, hash|
-      p.add "<hr><b>#{name}#{'*' if hash[:quoted]}</b><br />\n"
+    add_string = lambda do |name, en_hash, other_hash|
+      p.add "<hr><b>#{name}#{'*' if en_hash[:quoted]}</b><br />\n"
 
       cols = TA_COLS
-      rows = hash[:rows]
-      string = hash[:string]
+      rows = en_hash[:rows]
+      en_string = en_hash[:string]
+      other_string = other_hash[:string]
 
       if @gecko then
         gecko_hack = %Q{style="height:#{rows * 1.3}em;"}
@@ -115,22 +93,22 @@ class AndroidTranslationHelper
         gecko_hack = ""
       end
 
-      p.add %Q{en:<br /><textarea cols="#{cols}" rows="#{rows}" #{gecko_hack}>#{string}</textarea><br />}
-      p.add %Q{es:<br /><textarea cols="#{cols}" rows="#{rows}" #{gecko_hack}></textarea>}
+      p.add %Q{en:<br /><textarea cols="#{cols}" rows="#{rows}" #{gecko_hack}>#{en_string}</textarea><br />}
+      p.add %Q{#{other_lang}:<br /><textarea cols="#{cols}" rows="#{rows}" #{gecko_hack}>#{other_string}</textarea>}
 
-      if hash[:quoted] then
+      if en_hash[:quoted] then
         p.add %Q{<br />*<i>Spaces at the beginning and/or end of this one are important.</i> <b>Be sure to match the original!</b>}
       end
     end
 
-    @strings.each do |name, hash|
-      add_string.call(name, hash)
+    @strings['en'].each do |name, hash|
+      add_string.call(name, hash, @strings[other_lang][name])
     end
 
-    @str_ars.each do |name, array|
+    @str_ars['en'].each do |name, array|
       i = 0
       array.each do |hash|
-        add_string.call(name + "[#{i}]", hash)
+        add_string.call(name + "[#{i}]", hash, @str_ars[other_lang][name][i])
         i += 1
       end
     end
@@ -138,9 +116,13 @@ class AndroidTranslationHelper
     [200, {"Content-Type" => "text/html"}, p.generate]
   end
 
-  def cache_strings
-    @strings = {}
-    @str_ars = {}
+  def cache_strings(lang)
+    return if not Language::Languages.has_key?(lang)
+
+    strings_xml = @storage.get_strings(lang)
+
+    @strings[lang] = {}
+    @str_ars[lang] = {}
 
     parse_string = lambda do |element|
       h = {}
@@ -185,22 +167,22 @@ class AndroidTranslationHelper
       h
     end
 
-    doc = Nokogiri::XML(@en_strings_xml)
+    doc = Nokogiri::XML(strings_xml)
 
     doc.xpath('//string').each do |str_el|
       h = parse_string.call(str_el)
 
-      @strings[str_el.attr('name')] = h
+      @strings[lang][str_el.attr('name')] = h
     end
 
     doc.xpath('//string-array').each do |sa_el|
-      @str_ars[sa_el.attr('name')] = Array.new()
+      @str_ars[lang][sa_el.attr('name')] = Array.new()
 
       i = 0
       sa_el.element_children.each do |item_el|
         h = parse_string.call(item_el)
 
-        @str_ars[sa_el.attr('name')][i] = h
+        @str_ars[lang][sa_el.attr('name')][i] = h
         i += 1
       end
     end

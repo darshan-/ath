@@ -7,6 +7,7 @@ require './dsts.rb'
 
 class AndroidTranslationHelper
   TA_COLS = 80 # How many columns to use for the strings' textareas
+  NOT_FOUND = [404, {'Content-Type' => 'text/plain'}, '404 - Not Found' + ' '*512] # Padded so Chrome shows the 404
 
   def initialize()
     @storage = S3Storage.new()
@@ -35,6 +36,9 @@ class AndroidTranslationHelper
   def route
     m = @env['REQUEST_METHOD']
 
+    return NOT_FOUND unless @path[0] == 'bi'
+    @path.delete_at(0)
+
     if @path.empty? then
       home()
     elsif @path[0] == 'translate_to'
@@ -52,30 +56,48 @@ class AndroidTranslationHelper
     p.add "<p><b>Path:</b> #{path}</p>"
     p.add "<div>" << dump_env() << "</div>"
 
-    [200, {"Content-Type" => "text/html"}, p.generate]
+    [200, {'Content-Type' => 'text/html'}, p.generate]
   end
 
   def home()
     p = XhtmlPage.new
-    p.title = "Android Translation Helper"
+    p.title = "Battery Indicator Translation Helper"
 
     p.add "<h2>#{p.title}</h2>\n"
 
-    [200, {"Content-Type" => "text/html"}, p.generate]
+    p.add "<b>Work on an existing translation:</b>\n"
+    p.add "<ul>"
+    @storage.get_langs.each do |lang|
+      p.add %Q{<li><a href="/ath/bi/translate_to/#{lang}">#{Language::Languages[lang]}</a></li>\n}
+    end
+    p.add "</ul>"
+
+    p.add "<b>Start a new translation:</b>\n"
+    p.add "<ul>"
+    (Language::Languages.keys - @storage.get_langs - ['en']).each do |lang|
+      p.add %Q{<li><a href="translate_to/#{lang}">#{Language::Languages[lang]}</a></li>\n}
+    end
+    p.add "</ul>"
+
+    p.add "<b>If the language you'd like to translate to isn't listed, please email me via the contact info listed in the market.</b>"
+
+    [200, {'Content-Type' => 'text/html'}, p.generate]
   end
 
   def show_translate_form(other_lang)
     if other_lang.nil? then
-      return [404, {'Content-Type' => 'text/plain'}, '404 - Not Found']
+      return NOT_FOUND
     end
 
     if @strings[other_lang].nil? then
       cache_strings(other_lang)
-      return [404, {'Content-Type' => 'text/plain'}, '404 - Not Found'] if @strings[other_lang].nil?
+      return NOT_FOUND if @strings[other_lang].nil?
     end
 
     p = XhtmlPage.new()
     p.title = "Translate to #{Language::Languages[other_lang]}"
+
+    p.add "<h2>#{p.title}</h2>\n"
 
     add_string = lambda do |name, en_hash, xx_hash|
       p.add "<hr><b>#{name}#{'*' if en_hash[:quoted]}</b><br />\n"
@@ -113,7 +135,7 @@ class AndroidTranslationHelper
       end
     end
 
-    [200, {"Content-Type" => "text/html"}, p.generate]
+    [200, {'Content-Type' => 'text/html'}, p.generate]
   end
 
   def cache_strings(lang)
@@ -183,7 +205,7 @@ class AndroidTranslationHelper
   end
 
   def dump_env
-    s = String.new
+    s = ''
 
     s << "<hr />\n<p><i>" << Time.new.to_s << "</i></p>\n"
     s << "<br />\nEnvironment:<br />\n"

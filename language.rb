@@ -37,7 +37,7 @@ module Language
     'tr' => 'Turkish',
     'uk' => 'Ukrainian',
     'vi' => 'Vietnamese',
-    'CNzh' => 'Chinese, PRC',
-    'zh' => 'Chinese, traditional characters, non-PRC locales'
+    'zh' => 'Chinese, traditional characters, non-PRC locales',
+    'zhCN' => 'Chinese, PRC'
   }
 end

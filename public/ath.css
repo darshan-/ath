@@ -11,7 +11,7 @@ h3, h4, h5
 }
 
 html {
-  background-color: #202020;
+  background-color: #aaa;
 }
 
 p {
@@ -20,6 +20,21 @@ p {
 
 p.last_paragraph {
   margin-bottom: 0px;
+}
+
+ul {
+  margin-top: 0px;
+  margin-bottom: 15px;
+}
+
+textarea {
+  font-size: 14px;
+  font-family: Courier;
+  line-height: 18px;
+
+  border: 1px solid black;
+
+  padding: 2px;
 }
 
 h1 {
@@ -51,10 +66,11 @@ h3 {
 }
 
 .main_box {
-  width: 740px;
-  background-color: #fffafa;
+  width: 660px;
+  background-color: #fff;
   text-align: left;
   padding: 20px;
+  margin-top: 10px;
 
   font-size: 15px;
   font-family: Verdana, Arial, Helvetica, sans-serif;
@@ -62,10 +78,10 @@ h3 {
 }
 
 #centered_page_wrapper {
-  width: 780px;
+  width: 700px;
   position: relative;
   left: 50%;
-  margin-left: -390px
+  margin-left: -350px
 
 }
 

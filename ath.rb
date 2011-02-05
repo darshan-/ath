@@ -3,7 +3,7 @@ require 'nokogiri'
 require 'cgi'
 require './s3storage.rb'
 require './language.rb'
-require './dsts.rb'
+require './dsts-ext.rb'
 
 class AndroidTranslationHelper
   TA_COLS = 80 # How many columns to use for the strings' textareas
@@ -16,6 +16,7 @@ class AndroidTranslationHelper
     cache_strings('en')
   end
 
+  # Test with, e.g.: app.call({'HTTP_USER_AGENT' => '', 'REQUEST_URI' => '/ath/bi'})
   def call(env)
     @env = env
     @gecko = @env['HTTP_USER_AGENT'].match(/(?<!like )gecko/i)
@@ -49,7 +50,7 @@ class AndroidTranslationHelper
   end
 
   def default()
-    p = XhtmlPage.new
+    p = AthPage.new
     path = @path.join(', ')
 
     p.title = "#{path}"
@@ -60,7 +61,7 @@ class AndroidTranslationHelper
   end
 
   def home()
-    p = XhtmlPage.new
+    p = AthPage.new
     p.title = "Battery Indicator Translation Helper"
 
     p.add "<h2>#{p.title}</h2>\n"
@@ -75,7 +76,7 @@ class AndroidTranslationHelper
     p.add "<b>Start a new translation:</b>\n"
     p.add "<ul>"
     (Language::Languages.keys - @storage.get_langs - ['en']).each do |lang|
-      p.add %Q{<li><a href="translate_to/#{lang}">#{Language::Languages[lang]}</a></li>\n}
+      p.add %Q{<li><a href="/ath/bi/translate_to/#{lang}">#{Language::Languages[lang]}</a></li>\n}
     end
     p.add "</ul>"
 
@@ -94,7 +95,7 @@ class AndroidTranslationHelper
       return NOT_FOUND if @strings[other_lang].nil?
     end
 
-    p = XhtmlPage.new()
+    p = AthPage.new()
     p.title = "Translate to #{Language::Languages[other_lang]}"
 
     p.add "<h2>#{p.title}</h2>\n"

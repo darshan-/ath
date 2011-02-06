@@ -11,9 +11,7 @@ class AndroidTranslationHelper
 
   def initialize()
     @storage = S3Storage.new()
-    @strings = {}
-    @str_ars = {}
-    cache_strings('en')
+    initialize_cache()
   end
 
   # Test with, e.g.: app.call({'HTTP_USER_AGENT' => '', 'REQUEST_URI' => '/ath/bi'})
@@ -42,6 +40,8 @@ class AndroidTranslationHelper
 
     if @path.empty? then
       home()
+    elsif @path[0] == 'clear_cache'
+      clear_cache()
     elsif @path[0] == 'translate_to'
       if m == 'POST'
         post_translate_form(@path[1])
@@ -51,6 +51,17 @@ class AndroidTranslationHelper
     else
       default()
     end
+  end
+
+  def initialize_cache()
+    @strings = {}
+    @str_ars = {}
+    cache_strings('en')
+  end
+
+  def clear_cache()
+    initialize_cache()
+    [302, {'Location' => '/ath/bi/'}, '302 Found']
   end
 
   def default()

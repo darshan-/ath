@@ -227,6 +227,7 @@ class AndroidTranslationHelper
         str['name'] = key
         #str.content = value.gsub(/("|')/) {'\\' << $1}
         str.content = escape_quotes.call(value)
+        if @strings['en'][key][:quoted] then str.content = %Q{"#{str.content}"} end
         res.add_child(str)
       end
     end

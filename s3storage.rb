@@ -6,6 +6,7 @@ class NilClass
   def key()     self end
   def next()    self end
   def [](*args) self end
+  def empty?()  true end
 end
 
 class S3Storage

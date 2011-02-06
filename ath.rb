@@ -43,7 +43,11 @@ class AndroidTranslationHelper
     if @path.empty? then
       home()
     elsif @path[0] == 'translate_to'
-      show_translate_form(@path[1])
+      if m == 'POST'
+        post_translate_form(@path[1])
+      else
+        show_translate_form(@path[1])
+      end
     else
       default()
     end
@@ -80,25 +84,34 @@ class AndroidTranslationHelper
     end
     p.add "</ul>"
 
-    p.add "<b>If the language you'd like to translate to isn't listed, please email me via the contact info listed in the market.</b>"
+    p.add "<b>If the language you'd like to translate to isn't listed, "
+    p.add "please email me via the contact info listed in the Android Market.</b>"
 
     [200, {'Content-Type' => 'text/html'}, p.generate]
   end
 
-  def show_translate_form(other_lang)
-    if other_lang.nil? then
-      return NOT_FOUND
+  def valid_lang?(lang)
+    return false if lang.nil?
+
+    if @strings[lang].nil?
+      cache_strings(lang)
+      return false if @strings[lang].nil?
     end
 
-    if @strings[other_lang].nil? then
-      cache_strings(other_lang)
-      return NOT_FOUND if @strings[other_lang].nil?
-    end
+    return false if lang == 'en'
+
+    true
+  end
+
+  def show_translate_form(lang)
+    return NOT_FOUND unless valid_lang?(lang)
 
     p = AthPage.new()
-    p.title = "Translate to #{Language::Languages[other_lang]}"
-
+    p.title = "Translate to #{Language::Languages[lang]}"
     p.add "<h2>#{p.title}</h2>\n"
+
+    @trans_ins || File.open('translation_instructions.html') {|f| @trans_ins = f.read()}
+    p.add @trans_ins
 
     add_string = lambda do |name, en_hash, xx_hash|
       p.add "<hr><b>#{name}#{'*' if en_hash[:quoted]}</b><br />\n"
@@ -115,8 +128,10 @@ class AndroidTranslationHelper
         xx_gecko_hack = %Q{style="height:#{xx_rows * 1.3}em;"}
       end
 
-      p.add            %Q{en:<br /><textarea cols="#{cols}" rows="#{en_rows}" #{en_gecko_hack}>#{en_string}</textarea><br />}
-      p.add %Q{#{other_lang}:<br /><textarea cols="#{cols}" rows="#{xx_rows}" #{xx_gecko_hack}>#{xx_string}</textarea>}
+      p.add %Q{en:<br />\n<textarea }
+      p.add %Q{cols="#{cols}" rows="#{en_rows}" #{en_gecko_hack}>#{en_string}</textarea><br />\n}
+      p.add %Q{#{lang}:<br />\n<textarea name="#{name}" }
+      p.add %Q{cols="#{cols}" rows="#{xx_rows}" #{xx_gecko_hack}>#{xx_string}</textarea>\n}
 
       if en_hash[:quoted] then
         p.add %Q{<br />*<i>Spaces at the beginning and/or end of this one are important.</i> }
@@ -124,19 +139,95 @@ class AndroidTranslationHelper
       end
     end
 
+    p.add %Q{<form action="" method="post">}
+
     @strings['en'].each do |name, hash|
-      add_string.call(name, hash, @strings[other_lang][name])
+      add_string.call(name, hash, @strings[lang][name])
     end
 
     @str_ars['en'].each do |name, array|
       i = 0
       array.each do |hash|
-        add_string.call(name + "[#{i}]", hash, @str_ars[other_lang][name][i])
+        add_string.call(name + "[#{i}]", hash, @str_ars[lang][name][i])
         i += 1
       end
     end
 
+    p.add %Q{<input type="submit" value="Save All" />}
+    p.add "</form>"
+
     [200, {'Content-Type' => 'text/html'}, p.generate]
+  end
+
+  def post_translate_form(lang)
+    return NOT_FOUND unless valid_lang?(lang)
+
+    req = Rack::Request.new(@env)
+    doc = Nokogiri::XML('')
+    res = Nokogiri::XML::Node.new('resources', doc)
+    doc.add_child(res)
+
+    all_empty = lambda do |hash|
+      hash.each_value {|v| return false unless v.empty?}
+      return true
+    end
+
+    # I couldn't figure out how to make a regex do this for me...
+    escape_quotes = lambda do |s|
+      i = 0
+      len = s.length
+      brackets = 0
+
+      while i < len do
+        if s[i] == '<' then brackets += 1 end
+        if s[i] == '>' then brackets -= 1 end
+
+        if brackets < 1 && (s[i] == "'" || s[i] == '"')
+          s.insert(i, "\\")
+          i += 1
+          len += 1
+        end
+
+        i += 1
+      end
+
+      s
+    end
+
+    req.params.each do |key, value|
+      next if value.empty?
+
+      if value.is_a? Hash
+        next if all_empty.call(value)
+
+        str_ar = Nokogiri::XML::Node.new('string-array', doc)
+        str_ar['name'] = key
+
+        value.each_value do |v|
+          item = Nokogiri::XML::Node.new('item', doc)
+          #item.content = v.gsub(/("|')/) {'\\' << $1}
+          item.content = escape_quotes.call(v)
+          str_ar.add_child(item)
+        end
+
+        res.add_child(str_ar)
+      else
+        str = Nokogiri::XML::Node.new('string', doc)
+        str['name'] = key
+        #str.content = value.gsub(/("|')/) {'\\' << $1}
+        str.content = escape_quotes.call(value)
+        res.add_child(str)
+      end
+    end
+
+    #return [200, {'Content-Type' => 'text/plain'}, CGI.unescapeHTML(doc.to_xml(:encoding => 'utf-8'))]
+
+    @storage.put_strings(lang, CGI.unescapeHTML(doc.to_xml(:encoding => 'utf-8')))
+    cache_strings(lang)
+
+    #[200, {'Content-Type' => 'text/plain'}, @storage.get_strings(lang)]
+
+    [302, {'Location' => @env['REQUEST_URI']}, '302 Found']
   end
 
   def cache_strings(lang)

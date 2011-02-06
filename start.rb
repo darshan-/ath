@@ -4,7 +4,9 @@ require 'rack'
 require './ath.rb'
 
 BASE_PORT = 8080
-MAX_SERVERS = 6
+# Cached strings will be stale in all but the saving server when someone updates them,
+#  so you can only have one server
+MAX_SERVERS = 1
 LOG_FILE = './run/log'
 PID_FILE = './run/pid'
 
@@ -30,7 +32,7 @@ if servers > MAX_SERVERS then
   servers = MAX_SERVERS
 end
 
-while servers > 0
+servers.times do
   fork do
     stdout.puts "Starting server on port #{port} with PID #{$$}"
 
@@ -40,11 +42,9 @@ while servers > 0
     
     Rack::Handler::Thin.run(AndroidTranslationHelper.new(), :Host => '127.0.0.1', :Port => port)
   end
-
   sleep 0.01
 
   port += 1
-  servers -= 1
 end
 
 sleep 0.01

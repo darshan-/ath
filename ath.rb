@@ -184,6 +184,7 @@ class AndroidTranslationHelper
     end
 
     # I couldn't figure out how to make a regex do this for me...
+    #  (the hard part being: not escaping quotes that are within a tag)
     escape_quotes = lambda do |s|
       i = 0
       len = s.length
@@ -205,6 +206,12 @@ class AndroidTranslationHelper
       s
     end
 
+    quote_or_clean = lambda do |s, quote|
+      return %Q{"#{s}"} if quote
+
+      s.gsub(/\r|\n/, '').gsub(/\s+/, ' ').strip
+    end
+
     req.params.each do |key, value|
       next if value.empty?
 
@@ -214,10 +221,10 @@ class AndroidTranslationHelper
         str_ar = Nokogiri::XML::Node.new('string-array', doc)
         str_ar['name'] = key
 
-        value.each_value do |v|
+        value.each do |i, v|
           item = Nokogiri::XML::Node.new('item', doc)
-          #item.content = v.gsub(/("|')/) {'\\' << $1}
-          item.content = escape_quotes.call(v)
+          item.content = quote_or_clean.call( escape_quotes.call(v),
+                                              @strings['en'][key][i][:quoted])
           str_ar.add_child(item)
         end
 
@@ -225,9 +232,8 @@ class AndroidTranslationHelper
       else
         str = Nokogiri::XML::Node.new('string', doc)
         str['name'] = key
-        #str.content = value.gsub(/("|')/) {'\\' << $1}
-        str.content = escape_quotes.call(value)
-        if @strings['en'][key][:quoted] then str.content = %Q{"#{str.content}"} end
+        str.content = quote_or_clean.call( escape_quotes.call(value),
+                                           @strings['en'][key][:quoted])
         res.add_child(str)
       end
     end
@@ -236,8 +242,6 @@ class AndroidTranslationHelper
 
     @storage.put_strings(lang, CGI.unescapeHTML(doc.to_xml(:encoding => 'utf-8')))
     cache_strings(lang)
-
-    #[200, {'Content-Type' => 'text/plain'}, @storage.get_strings(lang)]
 
     [302, {'Location' => @env['REQUEST_URI']}, '302 Found']
   end

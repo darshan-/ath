@@ -125,7 +125,9 @@ class AndroidTranslationHelper
     p.add @trans_ins
 
     add_string = lambda do |name, en_hash, xx_hash|
-      p.add "<hr><b>#{name}#{'*' if en_hash[:quoted]}</b><br />\n"
+      anchor_name = name.gsub(/\[|\]/, '')
+      p.add %Q{<hr><div><a name="#{anchor_name}"><b>#{name}#{'*' if en_hash[:quoted]}</b></a>}
+      p.add %Q{<input style="float: right;" type="submit" name="_ath_submit_#{anchor_name}" value="Save All" /></div>\n}
 
       cols = TA_COLS
       en_rows = en_hash[:rows]
@@ -164,7 +166,6 @@ class AndroidTranslationHelper
       end
     end
 
-    p.add %Q{<input type="submit" value="Save All" />}
     p.add "</form>"
 
     [200, {'Content-Type' => 'text/html'}, p.generate]
@@ -173,10 +174,18 @@ class AndroidTranslationHelper
   def post_translate_form(lang)
     return NOT_FOUND unless valid_lang?(lang)
 
-    req = Rack::Request.new(@env)
+    params = Rack::Request.new(@env).params
     doc = Nokogiri::XML('')
     res = Nokogiri::XML::Node.new('resources', doc)
     doc.add_child(res)
+
+    anchor = nil
+    params.each_key do |key|
+      if key.match(/^_ath_submit_(.*)/)
+        anchor = $1;
+        params.delete(key)
+      end
+    end
 
     all_empty = lambda do |hash|
       hash.each_value {|v| return false unless v.empty?}
@@ -212,7 +221,7 @@ class AndroidTranslationHelper
       s.gsub(/\r|\n/, '').gsub(/\s+/, ' ').strip
     end
 
-    req.params.each do |key, value|
+    params.each do |key, value|
       next if value.empty?
 
       if value.is_a? Hash
@@ -243,7 +252,7 @@ class AndroidTranslationHelper
     @storage.put_strings(lang, CGI.unescapeHTML(doc.to_xml(:encoding => 'utf-8')))
     cache_strings(lang)
 
-    [302, {'Location' => @env['REQUEST_URI']}, '302 Found']
+    [302, {'Location' => @env['REQUEST_URI'] + '#' << anchor}, '302 Found']
   end
 
   def cache_strings(lang)

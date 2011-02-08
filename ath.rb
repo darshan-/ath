@@ -119,6 +119,7 @@ class AndroidTranslationHelper
 
     p = AthPage.new()
     p.title = "Translate to #{Language::Languages[lang]}"
+    p.add %Q{<p><a href="/ath/bi/">Home</a></p>}
     p.add "<h2>#{p.title}</h2>\n"
 
     @trans_ins || File.open('translation_instructions.html') {|f| @trans_ins = f.read()}

@@ -5,6 +5,11 @@ require './s3storage.rb'
 require './language.rb'
 require './dsts-ext.rb'
 
+# TODO:
+#  Cache all strings on startup
+#   Run cached strings in separate process?
+#   Don't cache strings at all?
+
 class AndroidTranslationHelper
   TA_COLS = 80 # How many columns to use for the strings' textareas
   NOT_FOUND = [404, {'Content-Type' => 'text/plain'}, '404 - Not Found' + ' '*512] # Padded so Chrome shows the 404
@@ -49,7 +54,7 @@ class AndroidTranslationHelper
         show_translate_form(@path[1])
       end
     else
-      default()
+      NOT_FOUND
     end
   end
 
@@ -64,36 +69,28 @@ class AndroidTranslationHelper
     [302, {'Location' => '/ath/bi/'}, '302 Found']
   end
 
-  def default()
-    p = AthPage.new
-    path = @path.join(', ')
-
-    p.title = "#{path}"
-    p.add "<p><b>Path:</b> #{path}</p>"
-    p.add "<div>" << dump_env() << "</div>"
-
-    [200, {'Content-Type' => 'text/html'}, p.generate]
-  end
-
   def home()
     p = AthPage.new
-    p.title = "Battery Indicator Translation Helper"
+    existing = @storage.get_langs
+    unstarted = Language::Languages.values - existing - ['en']
 
+    list_links = lambda do |codes|
+      p.add "<ul>"
+      Language::Languages.each do |lang, code|
+        next if !codes.include?(code)
+        p.add %Q{<li><a href="/ath/bi/translate_to/#{code}">#{lang}</a></li>\n}
+      end
+      p.add "</ul>"
+    end
+
+    p.title = "Battery Indicator Translation Helper"
     p.add "<h2>#{p.title}</h2>\n"
 
     p.add "<b>Work on an existing translation:</b>\n"
-    p.add "<ul>"
-    @storage.get_langs.each do |lang|
-      p.add %Q{<li><a href="/ath/bi/translate_to/#{lang}">#{Language::Languages[lang]}</a></li>\n}
-    end
-    p.add "</ul>"
+    list_links.call(existing)
 
     p.add "<b>Start a new translation:</b>\n"
-    p.add "<ul>"
-    (Language::Languages.keys - @storage.get_langs - ['en']).each do |lang|
-      p.add %Q{<li><a href="/ath/bi/translate_to/#{lang}">#{Language::Languages[lang]}</a></li>\n}
-    end
-    p.add "</ul>"
+    list_links.call(unstarted)
 
     p.add "<b>If the language you'd like to translate to isn't listed, "
     p.add "please email me via the contact info listed in the Android Market.</b>"
@@ -118,7 +115,7 @@ class AndroidTranslationHelper
     return NOT_FOUND unless valid_lang?(lang)
 
     p = AthPage.new()
-    p.title = "Translate to #{Language::Languages[lang]}"
+    p.title = "Translate to #{Language::Languages.key(lang)}"
     p.add %Q{<p><a href="/ath/bi/">Home</a></p>}
     p.add "<h2>#{p.title}</h2>\n"
 
@@ -257,7 +254,7 @@ class AndroidTranslationHelper
   end
 
   def cache_strings(lang)
-    return if not Language::Languages.has_key?(lang)
+    return if not Language::Languages.has_value?(lang)
 
     strings_xml = @storage.get_strings(lang)
 

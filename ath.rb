@@ -6,9 +6,7 @@ require './language.rb'
 require './dsts-ext.rb'
 
 # TODO:
-#  Cache all strings on startup
 #   Run cached strings in separate process?
-#   Don't cache strings at all?
 
 class AndroidTranslationHelper
   TA_COLS = 80 # How many columns to use for the strings' textareas
@@ -61,7 +59,9 @@ class AndroidTranslationHelper
   def initialize_cache()
     @strings = {}
     @str_ars = {}
-    cache_strings('en')
+    (@storage.get_langs() + ['en']).each do |lang|
+      cache_strings(lang)
+    end
   end
 
   def clear_cache()
@@ -71,7 +71,7 @@ class AndroidTranslationHelper
 
   def home()
     p = AthPage.new
-    existing = @storage.get_langs
+    existing = @storage.get_langs()
     unstarted = Language::Languages.values - existing - ['en']
 
     list_links = lambda do |codes|

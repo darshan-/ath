@@ -239,6 +239,7 @@ class AndroidTranslationHelper
       else
         str = Nokogiri::XML::Node.new('string', doc)
         str['name'] = key
+        str['formatted'] = 'false'
         str.content = quote_or_clean.call( escape_quotes.call(value),
                                            @strings['en'][key][:quoted])
         res.add_child(str)

@@ -59,6 +59,7 @@ class AndroidTranslationHelper
   def initialize_cache()
     @strings = {}
     @str_ars = {}
+    @str_pls = {}
     (@storage.get_langs() + ['en']).each do |lang|
       cache_strings(lang)
     end
@@ -128,7 +129,7 @@ class AndroidTranslationHelper
       p.add %Q{<input style="float: right;" type="submit" name="_ath_submit_#{anchor_name}" value="Save All" /></div>\n}
 
       cols = TA_COLS
-      en_rows = en_hash[:rows]
+      en_rows = en_hash[:rows] || 1
       xx_rows = xx_hash[:rows] || en_rows
       en_string = en_hash[:string]
       xx_string = xx_hash[:string]
@@ -161,6 +162,12 @@ class AndroidTranslationHelper
       array.each do |hash|
         add_string.call(name + "[#{i}]", hash, @str_ars[lang][name][i])
         i += 1
+      end
+    end
+
+    @str_pls['en'].each do |name, plural|
+      %w(zero one two few many other).each do |quantity|
+        add_string.call(name + "[#{quantity}]", plural[quantity], @str_pls[lang][name][quantity])
       end
     end
 
@@ -225,17 +232,33 @@ class AndroidTranslationHelper
       if value.is_a? Hash
         next if all_empty.call(value)
 
-        str_ar = Nokogiri::XML::Node.new('string-array', doc)
-        str_ar['name'] = key
+        if value.has_key? '0'
+          str_ar = Nokogiri::XML::Node.new('string-array', doc)
+          str_ar['name'] = key
 
-        value.each do |i, v|
-          item = Nokogiri::XML::Node.new('item', doc)
-          item.content = quote_or_clean.call( escape_quotes.call(v),
-                                              @strings['en'][key][i][:quoted])
-          str_ar.add_child(item)
+          value.each do |i, v|
+            item = Nokogiri::XML::Node.new('item', doc)
+            item.content = quote_or_clean.call( escape_quotes.call(v),
+                                                @strings['en'][key][i][:quoted])
+            str_ar.add_child(item)
+          end
+
+          res.add_child(str_ar)
+        else
+          str_pl = Nokogiri::XML::Node.new('plurals', doc)
+          str_pl['name'] = key
+
+          value.each do |q, v|
+            next if v.empty?
+            item = Nokogiri::XML::Node.new('item', doc)
+            item['quantity'] = q
+            item.content = quote_or_clean.call( escape_quotes.call(v),
+                                                @strings['en'][key][q][:quoted])
+            str_pl.add_child(item)
+          end
+
+          res.add_child(str_pl)
         end
-
-        res.add_child(str_ar)
       else
         str = Nokogiri::XML::Node.new('string', doc)
         str['name'] = key
@@ -261,6 +284,7 @@ class AndroidTranslationHelper
 
     @strings[lang] = {}
     @str_ars[lang] = {}
+    @str_pls[lang] = {}
 
     parse_string = lambda do |element|
       h = {}
@@ -316,6 +340,14 @@ class AndroidTranslationHelper
 
       sa_el.element_children.each_with_index do |item_el, i|
         @str_ars[lang][sa_el.attr('name')][i] = parse_string.call(item_el)
+      end
+    end
+
+    doc.xpath('//plurals').each do |sp_el|
+      @str_pls[lang][sp_el.attr('name')] = {}
+
+      sp_el.element_children.each do |item_el|
+        @str_pls[lang][sp_el.attr('name')][item_el.attr('quantity')] = parse_string.call(item_el)
       end
     end
   end

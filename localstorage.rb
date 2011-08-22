@@ -44,9 +44,12 @@ class LocalStorage
   end
 
   def put_strings(lang, strings_xml)
-    #o = AWS::S3::Bucket.find('ath-bi-strings').new_object()
-    #o.key = AWS::S3::Bucket.find('ath-bi-strings').objects(:prefix => lang + '_').last.key.next || lang + '_000001'
-    #o.value = strings_xml
-    #o.store
+    oldwd = Dir.getwd()
+    Dir.chdir(DIR_NAME)
+
+    filename = Dir.glob("#{lang}_*").last.next || lang + '_000001'
+    File.open(filename, 'w') {|f| f.write(strings_xml)}
+
+    Dir.chdir(oldwd)
   end
 end

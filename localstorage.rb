@@ -38,7 +38,7 @@ class LocalStorage
 
   def put_strings(lang, strings_xml)
     in_dir do
-      filename = Dir.glob("#{lang}_*").last.next || lang + '_000001'
+      filename = Dir.glob("#{lang}_*").sort.last.next || lang + '_000001'
       File.open(filename, 'w') {|f| f.write(strings_xml)}
     end
   end

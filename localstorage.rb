@@ -16,39 +16,43 @@ class LocalStorage
   def get_langs()
     langs = []
 
-    oldwd = Dir.getwd()
-    Dir.chdir(DIR_NAME)
-
-    Dir.glob('*_*').each do |filename|
-      langs << filename.split('_').first
+    in_dir do
+      Dir.glob('*_*').each do |filename|
+        langs << filename.split('_').first
+      end
     end
-
-    Dir.chdir(oldwd)
 
     langs.uniq - ['en']
   end
 
   def get_strings(lang)
-    return if not get_langs().include? lang
-
-    oldwd = Dir.getwd()
-    Dir.chdir(DIR_NAME)
-
-    filename = Dir.glob("#{lang}_*").last
     string = ''
-    File.open(filename) {|f| string = f.read()}
 
-    Dir.chdir(oldwd)
-    
+    in_dir do
+      filename = Dir.glob("#{lang}_*").sort.last
+      File.open(filename) {|f| string = f.read()}
+    end
+
     string
   end
 
   def put_strings(lang, strings_xml)
+    in_dir do
+      filename = Dir.glob("#{lang}_*").last.next || lang + '_000001'
+      File.open(filename, 'w') {|f| f.write(strings_xml)}
+    end
+  end
+
+  private
+
+  def in_dir
     oldwd = Dir.getwd()
     Dir.chdir(DIR_NAME)
 
-    filename = Dir.glob("#{lang}_*").last.next || lang + '_000001'
-    File.open(filename, 'w') {|f| f.write(strings_xml)}
+    begin
+      yield
+    rescue
+    end
 
     Dir.chdir(oldwd)
   end

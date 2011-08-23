@@ -2,6 +2,7 @@
 require 'nokogiri'
 require 'cgi'
 require './s3storage.rb'
+require './localstorage.rb'
 require './language.rb'
 require './dsts-ext.rb'
 
@@ -11,9 +12,15 @@ require './dsts-ext.rb'
 class AndroidTranslationHelper
   TA_COLS = 80 # How many columns to use for the strings' textareas
   NOT_FOUND = [404, {'Content-Type' => 'text/plain'}, '404 - Not Found' + ' '*512] # Padded so Chrome shows the 404
+  LOCAL = true
 
   def initialize()
-    @storage = S3Storage.new()
+    if LOCAL
+      @storage = LocalStorage.new()
+    else
+      @storage = S3Storage.new()
+    end
+
     initialize_cache()
   end
 

@@ -245,8 +245,8 @@ class AndroidTranslationHelper
 
           value.each do |i, v|
             item = Nokogiri::XML::Node.new('item', doc)
-            item.content = quote_or_clean.call( escape_quotes.call(v),
-                                                @strings['en'][key][i][:quoted])
+            item.content = quote_or_clean.call(escape_quotes.call(validate_tags(v)),
+                                               @strings['en'][key][i][:quoted])
             str_ar.add_child(item)
           end
 
@@ -259,8 +259,8 @@ class AndroidTranslationHelper
             next if v.empty?
             item = Nokogiri::XML::Node.new('item', doc)
             item['quantity'] = q
-            item.content = quote_or_clean.call( escape_quotes.call(v),
-                                                @strings['en'][key][q][:quoted])
+            item.content = quote_or_clean.call(escape_quotes.call(validate_tags(v)),
+                                               @strings['en'][key][q][:quoted])
             str_pl.add_child(item)
           end
 
@@ -270,8 +270,8 @@ class AndroidTranslationHelper
         str = Nokogiri::XML::Node.new('string', doc)
         str['name'] = key
         str['formatted'] = 'false'
-        str.content = quote_or_clean.call( escape_quotes.call(value),
-                                           @strings['en'][key][:quoted])
+        str.content = quote_or_clean.call(escape_quotes.call(validate_tags(value)),
+                                          @strings['en'][key][:quoted])
         res.add_child(str)
       end
     end
@@ -407,7 +407,9 @@ class AndroidTranslationHelper
                 break
               end
             else
-              open_tags.push(cur_tag)
+              if s[i-1] != '/'
+                open_tags.push(cur_tag)
+              end
               cur_tag = nil
             end
           else
@@ -423,7 +425,7 @@ class AndroidTranslationHelper
             next
           end
         else
-          s.slice![i]
+          s.slice!(i)
 
           next
         end
@@ -437,6 +439,8 @@ class AndroidTranslationHelper
 
       i += 1
     end
+
+    failure = true if not open_tags.empty?
 
     if failure
       s = s.gsub(/<|>/, '')

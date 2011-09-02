@@ -370,4 +370,78 @@ class AndroidTranslationHelper
 
     s
   end
+
+  # Makes sure tags are all properly matched; necessary to avoid corrupting XML file
+  def validate_tags(s)
+    s = s.gsub(/(<)\s*/, '\1').gsub(/(<\/)\s*/, '\1').gsub(/\s*(>)/, '\1')
+
+    open_tags = []
+    cur_tag = nil
+    is_complete = false
+    is_end_tag = false
+    failure = false
+
+    i = 0
+    while (i < s.length) do
+      c = s[i]
+
+      if c == '<'
+        if cur_tag
+          s.slice!(i)
+
+          next
+        else
+          cur_tag = String.new
+          is_complete = false
+          is_end_tag = false
+        end
+      elsif c == '>'
+        if cur_tag
+          if cur_tag.length > 0
+            if is_end_tag
+              if cur_tag == open_tags.last
+                open_tags.pop
+                cur_tag = nil
+              else
+                failure = true
+                break
+              end
+            else
+              open_tags.push(cur_tag)
+              cur_tag = nil
+            end
+          else
+            if is_end_tag
+              s.slice!(i-2..i)
+              i -= 2
+            else
+              s.slice!(i-1..i)
+              i -= 1
+            end
+
+            cur_tag = nil
+            next
+          end
+        else
+          s.slice![i]
+
+          next
+        end
+      elsif c == ' ' and cur_tag
+        is_complete = true
+      elsif c == '/' and s[i-1] == '<'
+        is_end_tag = true
+      elsif cur_tag and not is_complete
+        cur_tag << c
+      end
+
+      i += 1
+    end
+
+    if failure
+      s = s.gsub(/<|>/, '')
+    end
+
+    s
+  end
 end

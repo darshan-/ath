@@ -371,15 +371,21 @@ class AndroidTranslationHelper
     s
   end
 
-  # Makes sure tags are all properly matched; necessary to avoid corrupting XML file
+  # Makes sure tags are all clean and properly matched; necessary to avoid corrupting XML file
   def validate_tags(s)
     s = s.gsub(/(<)\s*/, '\1').gsub(/(<\/)\s*/, '\1').gsub(/\s*(>)/, '\1')
 
     open_tags = []
     cur_tag = nil
-    is_complete = false
+    cur_tag_extras = nil
     is_end_tag = false
     failure = false
+
+    validate_attrs = lambda do |s|
+      return if s.nil?
+      s = s.gsub(/\s+/, ' ').gsub(/\s*=\s*/, '=').strip
+      failure = !s.match(/^([a-z]+="[^"]*"\s*)*\/?$/)
+    end
 
     i = 0
     while (i < s.length) do
@@ -392,14 +398,17 @@ class AndroidTranslationHelper
           next
         else
           cur_tag = String.new
-          is_complete = false
+          cur_tag_extras = nil
           is_end_tag = false
         end
       elsif c == '>'
         if cur_tag
           if cur_tag.length > 0
             if is_end_tag
-              if cur_tag == open_tags.last
+              if cur_tag_extras and cur_tag_extras.strip.length > 0
+                failure = true
+                break
+              elsif cur_tag == open_tags.last
                 open_tags.pop
                 cur_tag = nil
               else
@@ -410,6 +419,10 @@ class AndroidTranslationHelper
               if s[i-1] != '/'
                 open_tags.push(cur_tag)
               end
+
+              validate_attrs.call(cur_tag_extras)
+              break if failure
+
               cur_tag = nil
             end
           else
@@ -429,18 +442,23 @@ class AndroidTranslationHelper
 
           next
         end
-      elsif c == ' ' and cur_tag
-        is_complete = true
+      elsif c == ' ' and cur_tag and not cur_tag_extras
+        cur_tag_extras = String.new
       elsif c == '/' and s[i-1] == '<'
         is_end_tag = true
-      elsif cur_tag and not is_complete
-        cur_tag << c
+      elsif cur_tag
+        if not cur_tag_extras
+          cur_tag << c
+        else
+          cur_tag_extras << c
+        end
       end
 
       i += 1
     end
 
     failure = true if not open_tags.empty?
+    failure = true if cur_tag
 
     if failure
       s = s.gsub(/<|>/, '')

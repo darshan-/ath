@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-require 'nokogiri'
 require 'cgi'
-require './s3storage.rb'
-require './localstorage.rb'
+require './s3_storage.rb'
+require './local_storage.rb'
 require './language.rb'
 require './dsts-ext.rb'
 
@@ -41,6 +40,8 @@ class AndroidTranslationHelper
 
     route()
   end
+
+  private
 
   def route
     m = @env['REQUEST_METHOD']
@@ -130,16 +131,35 @@ class AndroidTranslationHelper
     @trans_ins || File.open('translation_instructions.html') {|f| @trans_ins = f.read()}
     p.add @trans_ins
 
+    # Doesn't account for words that don't fit at the end starting new lines, but gets plenty close for now
+    count_rows = lambda do |s|
+      col = 1
+      row = 1
+
+      s.each_char do |c|
+        if c == "\n" or col > TA_COLS then
+          col = 1
+          row += 1
+          next
+        end
+
+        col += 1
+      end
+
+      row
+    end
+
     add_string = lambda do |name, en_hash, xx_hash|
       anchor_name = name.gsub(/\[|\]/, '')
       p.add %Q{<hr><div><a name="#{anchor_name}"><b>#{name}#{'*' if en_hash[:quoted]}</b></a>}
       p.add %Q{<input style="float: right;" type="submit" name="_ath_submit_#{anchor_name}" value="Save All" /></div>\n}
 
       cols = TA_COLS
-      en_rows = en_hash[:rows] || 1
-      xx_rows = xx_hash[:rows] || en_rows
+      
       en_string = en_hash[:string]
       xx_string = xx_hash[:string]
+      en_rows = count_rows.call(en_string) || 1
+      xx_rows = count_rows.call(xx_string) || en_rows
 
       en_gecko_hack = xx_gecko_hack = ""
       if @gecko then
@@ -187,9 +207,6 @@ class AndroidTranslationHelper
     return NOT_FOUND unless valid_lang?(lang)
 
     params = Rack::Request.new(@env).params
-    doc = Nokogiri::XML('')
-    res = Nokogiri::XML::Node.new('resources', doc)
-    doc.add_child(res)
 
     anchor = nil
     params.each_key do |key|
@@ -204,34 +221,9 @@ class AndroidTranslationHelper
       return true
     end
 
-    # I couldn't figure out how to make a regex do this for me...
-    #  (the hard part being: not escaping quotes that are within a tag)
-    escape_quotes = lambda do |s|
-      i = 0
-      len = s.length
-      brackets = 0
-
-      while i < len do
-        if s[i] == '<' then brackets += 1 end
-        if s[i] == '>' then brackets -= 1 end
-
-        if brackets < 1 && (s[i] == "'" || s[i] == '"')
-          s.insert(i, "\\")
-          i += 1
-          len += 1
-        end
-
-        i += 1
-      end
-
-      s
-    end
-
-    quote_or_clean = lambda do |s, quote|
-      return %Q{"#{s}"} if quote
-
-      s.gsub(/\r|\n/, '').gsub(/\s+/, ' ').strip
-    end
+    strings = {}
+    str_ars = {}
+    str_pls = {}
 
     params.each do |key, value|
       next if value.empty?
@@ -240,123 +232,31 @@ class AndroidTranslationHelper
         next if all_empty.call(value)
 
         if value.has_key? '0'
-          str_ar = Nokogiri::XML::Node.new('string-array', doc)
-          str_ar['name'] = key
+          str_ars[key] = []
 
           value.each do |i, v|
-            item = Nokogiri::XML::Node.new('item', doc)
-            item.content = quote_or_clean.call(escape_quotes.call(validate_tags(v)),
-                                               @strings['en'][key][i][:quoted])
-            str_ar.add_child(item)
+            str_ars[key][i] = quote_or_clean.call(escape_quotes.call(validate_tags(v)),
+                                                  @strings['en'][key][i][:quoted])
           end
-
-          res.add_child(str_ar)
         else
-          str_pl = Nokogiri::XML::Node.new('plurals', doc)
-          str_pl['name'] = key
+          str_pls[key] = {}
 
           value.each do |q, v|
             next if v.empty?
-            item = Nokogiri::XML::Node.new('item', doc)
-            item['quantity'] = q
-            item.content = quote_or_clean.call(escape_quotes.call(validate_tags(v)),
-                                               @strings['en'][key][q][:quoted])
-            str_pl.add_child(item)
-          end
 
-          res.add_child(str_pl)
+            str_pls[key][q] = quote_or_clean.call(escape_quotes.call(validate_tags(v)),
+                                                  @strings['en'][key][q][:quoted])
+          end
         end
       else
-        str = Nokogiri::XML::Node.new('string', doc)
-        str['name'] = key
-        str['formatted'] = 'false'
-        str.content = quote_or_clean.call(escape_quotes.call(validate_tags(value)),
-                                          @strings['en'][key][:quoted])
-        res.add_child(str)
+        strings[key] = quote_or_clean.call(escape_quotes.call(validate_tags(value)),
+                                           @strings['en'][key][:quoted])
       end
     end
 
-    #return [200, {'Content-Type' => 'text/plain'}, CGI.unescapeHTML(doc.to_xml(:encoding => 'utf-8'))]
-
-    @storage.put_strings(lang, CGI.unescapeHTML(doc.to_xml(:encoding => 'utf-8')))
-    cache_strings(lang)
+    @storage.put_strings(lang, {:strings => strings, :str_ars => str_ars, :str_pls => str_pls})
 
     [302, {'Location' => @env['REQUEST_URI'] + '#' << anchor}, '302 Found']
-  end
-
-  def cache_strings(lang)
-    return if not Language::Languages.has_value?(lang)
-
-    strings_xml = @storage.get_strings(lang)
-
-    @strings[lang] = {}
-    @str_ars[lang] = {}
-    @str_pls[lang] = {}
-
-    parse_string = lambda do |element|
-      h = {}
-      s = ''
-
-      # Doesn't account for words that don't fit at the end starting new lines, but gets plenty close for now
-      count_rows = lambda do |s|
-        col = 1
-        row = 1
-
-        s.each_char do |c|
-          if c == "\n" or col > TA_COLS then
-            col = 1
-            row += 1
-            next
-          end
-
-          col += 1
-        end
-
-        row
-      end
-
-      # element.text strips HTML like <b> and/or <i> that we want to keep, so we loop over the children
-      #  taking each child's to_xml to preserve them.  Manually setting encoding seems to be necessary
-      #  to preserve multi-byte characters.
-      element.children.each do |c|
-        s << c.to_xml(:encoding => 'utf-8')
-      end
-
-      # gsub! returns nil if there is no match, so it's no good for chaining unless you know you always match
-      s = s.gsub(/\s*\\n\s*/, '\n').gsub(/\s+/, ' ').gsub(/\\n/, "\\n\n").gsub(/\\("|')/, '\1').strip
-
-      if s[0] == '"' and s[s.length-1] == '"' then
-        h[:quoted] = true
-        s = s[1, s.length-2]
-      end
-
-      h[:string] = s
-      h[:rows] = count_rows.call(s)
-
-      h
-    end
-
-    doc = Nokogiri::XML(strings_xml)
-
-    doc.xpath('//string').each do |str_el|
-      @strings[lang][str_el.attr('name')] = parse_string.call(str_el)
-    end
-
-    doc.xpath('//string-array').each do |sa_el|
-      @str_ars[lang][sa_el.attr('name')] = []
-
-      sa_el.element_children.each_with_index do |item_el, i|
-        @str_ars[lang][sa_el.attr('name')][i] = parse_string.call(item_el)
-      end
-    end
-
-    doc.xpath('//plurals').each do |sp_el|
-      @str_pls[lang][sp_el.attr('name')] = {}
-
-      sp_el.element_children.each do |item_el|
-        @str_pls[lang][sp_el.attr('name')][item_el.attr('quantity')] = parse_string.call(item_el)
-      end
-    end
   end
 
   def dump_env

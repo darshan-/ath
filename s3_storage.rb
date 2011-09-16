@@ -1,13 +1,6 @@
 require 'aws/s3'
 require './secret.rb'
-
-class NilClass
-  def value()   self end
-  def key()     self end
-  def next()    self end
-  def [](*args) self end
-  def empty?()  true end
-end
+require './nicer_nil.rb'
 
 class S3Storage
   def initialize()
@@ -26,10 +19,12 @@ class S3Storage
   end
 
   def get_strings(lang)
-    AWS::S3::Bucket.find('ath-bi-strings').objects(:prefix => lang + '_').last.value
+    XMLHelper.xml_to_str(AWS::S3::Bucket.find('ath-bi-strings').objects(:prefix => lang + '_').last.value)
   end
 
-  def put_strings(lang, strings_xml)
+  def put_strings(lang, strings)
+    strings_xml = XMLHelper.str_to_xml(strings)
+
     o = AWS::S3::Bucket.find('ath-bi-strings').new_object()
     o.key = AWS::S3::Bucket.find('ath-bi-strings').objects(:prefix => lang + '_').last.key.next || lang + '_000001'
     o.value = strings_xml

@@ -32,8 +32,10 @@ class LocalStorage
   end
 
   def put_strings(lang, strings)
+    puts "about to convert"
+    puts strings
     xml_str = XMLHelper.str_to_xml(strings)
-
+    puts "just converted"
     in_dir do
       filename = Dir.glob("#{lang}_*").sort.last.next || lang + '_000001'
       File.open(filename, 'w') {|f| f.write(xml_str)}

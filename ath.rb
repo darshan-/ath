@@ -2,8 +2,10 @@
 require 'cgi'
 require './s3_storage.rb'
 require './local_storage.rb'
+require './mongo_storage.rb'
 require './language.rb'
 require './dsts-ext.rb'
+require 'benchmark'
 
 class AndroidTranslationHelper
   TA_COLS = 80 # How many columns to use for the strings' textareas
@@ -13,7 +15,11 @@ class AndroidTranslationHelper
   def initialize()
     @storage = STORAGE_CLASS.new
 
-    @en_strings = @storage.get_strings('en')
+    m = Benchmark.measure do
+      initialize_cache()
+    end
+
+    puts "#{Time.now}: Loaded all strings in #{sprintf('%.3f', m.total)} seconds."
   end
 
   # Test with, e.g.: app.call({'HTTP_USER_AGENT' => '', 'REQUEST_URI' => '/ath/bi'})
@@ -44,7 +50,7 @@ class AndroidTranslationHelper
 
     if @path.empty? then
       home()
-    elsif @path[0] == 'reload_en'
+    elsif @path[0] == 'reload_strings'
       reload_en()
     elsif @path[0] == 'translate_to'
       if m == 'POST'
@@ -57,8 +63,16 @@ class AndroidTranslationHelper
     end
   end
 
-  def reload_en()
-    @en_strings = @storage.get_strings('en')
+  def initialize_cache()
+    @strings = {}
+
+    (@storage.get_langs() + ['en']).each do |lang|
+      @strings[lang] = @storage.get_strings(lang)
+    end
+  end
+
+  def reload_strings()
+    initialize_cache()
 
     [302, {'Location' => '/ath/bi/'}, '302 Found']
   end
@@ -93,6 +107,7 @@ class AndroidTranslationHelper
   end
 
   def valid_lang?(lang)
+    return true  if @strings.has_key?(lang)
     return false if lang.nil?
     return false if lang == 'en' # Not valid to edit en through web
     return false if not Language::Languages.has_value?(lang)
@@ -103,8 +118,6 @@ class AndroidTranslationHelper
   public
   def show_translate_form(lang)
     return NOT_FOUND unless valid_lang?(lang)
-
-    xx_strings = @storage.get_strings(lang)
 
     p = AthPage.new()
     p.title = "Translate to #{Language::Languages.key(lang)}"
@@ -165,21 +178,21 @@ class AndroidTranslationHelper
 
     p.add %Q{<form action="" method="post">}
 
-    @en_strings[:strings].each do |name, hash|
-      add_string.call(name, hash, xx_strings[:strings][name])
+    @strings['en'][:strings].each do |name, hash|
+      add_string.call(name, hash, @strings[lang][:strings][name])
     end
 
-    @en_strings[:str_ars].each do |name, array|
+    @strings['en'][:str_ars].each do |name, array|
       i = 0
       array.each do |hash|
-        add_string.call(name + "[#{i}]", hash, xx_strings[:str_ars][name][i])
+        add_string.call(name + "[#{i}]", hash, @strings[lang][:str_ars][name][i])
         i += 1
       end
     end
 
-    @en_strings[:str_pls].each do |name, plural|
+    @strings['en'][:str_pls].each do |name, plural|
       %w(zero one two few many other).each do |quantity|
-        add_string.call(name + "[#{quantity}]", plural[quantity], xx_strings[:str_pls][name][quantity])
+        add_string.call(name + "[#{quantity}]", plural[quantity], @strings[lang][:str_pls][name][quantity])
       end
     end
 
@@ -219,12 +232,14 @@ class AndroidTranslationHelper
         if value.has_key? '0'
           str_ars[key] = []
 
+          puts value
           value.each do |i, v|
-            str_ars[key][i] = {:string => value, :quoted => @en_strings[:str_ars][key][i][:quoted]}
+            str_ars[key][i.to_i] = {:string => value, :quoted => @en_strings[:str_ars][key][i][:quoted]}
           end
         else
           str_pls[key] = {}
 
+          puts value
           value.each do |q, v|
             next if v.empty?
 
@@ -236,7 +251,9 @@ class AndroidTranslationHelper
       end
     end
 
-    @storage.put_strings(lang, {:strings => strings, :str_ars => str_ars, :str_pls => str_pls})
+    @strings[lang] = {:strings => strings, :str_ars => str_ars, :str_pls => str_pls}
+
+    @storage.put_strings(lang, @strings[lang])
 
     [302, {'Location' => @env['REQUEST_URI'] + '#' << anchor}, '302 Found']
   end

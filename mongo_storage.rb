@@ -10,9 +10,10 @@ class MongoStorage
     @db.collection_names.delete_if {|i| i =~ /\./} - ['en'] # Mongo system collections all have a dot
   end
 
-  def get_string(lang, name)
+  def get_strings(lang)
   end
 
-  def put_string(lang, name, string)
+  def put_strings(lang, strings)
+    # For each item, update the timestamp if and only if the item has changed
   end
 end

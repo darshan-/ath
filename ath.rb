@@ -5,28 +5,21 @@ require './local_storage.rb'
 require './language.rb'
 require './dsts-ext.rb'
 
-# TODO:
-#   Run cached strings in separate process?
-
 class AndroidTranslationHelper
   TA_COLS = 80 # How many columns to use for the strings' textareas
   NOT_FOUND = [404, {'Content-Type' => 'text/plain'}, '404 - Not Found' + ' '*512] # Padded so Chrome shows the 404
-  LOCAL = true
+  STORAGE_CLASS = LocalStorage
 
   def initialize()
-    if LOCAL
-      @storage = LocalStorage.new()
-    else
-      @storage = S3Storage.new()
-    end
+    @storage = STORAGE_CLASS.new
 
-    initialize_cache()
+    @en_strings = @storage.get_strings('en')
   end
 
   # Test with, e.g.: app.call({'HTTP_USER_AGENT' => '', 'REQUEST_URI' => '/ath/bi'})
   def call(env)
     @env = env
-    @gecko = @env['HTTP_USER_AGENT'].match(/(?<!like )gecko/i)
+    @gecko_p = @env['HTTP_USER_AGENT'].match(/(?<!like )gecko/i)
 
     # REQUEST_URI is still encoded; split before decoding to allow encoded slashes
     @path = env['REQUEST_URI'].split('/')
@@ -51,8 +44,8 @@ class AndroidTranslationHelper
 
     if @path.empty? then
       home()
-    elsif @path[0] == 'clear_cache'
-      clear_cache()
+    elsif @path[0] == 'reload_en'
+      reload_en()
     elsif @path[0] == 'translate_to'
       if m == 'POST'
         post_translate_form(@path[1])
@@ -64,17 +57,9 @@ class AndroidTranslationHelper
     end
   end
 
-  def initialize_cache()
-    @strings = {}
-    @str_ars = {}
-    @str_pls = {}
-    (@storage.get_langs() + ['en']).each do |lang|
-      cache_strings(lang)
-    end
-  end
+  def reload_en()
+    @en_strings = @storage.get_strings('en')
 
-  def clear_cache()
-    initialize_cache()
     [302, {'Location' => '/ath/bi/'}, '302 Found']
   end
 
@@ -109,19 +94,17 @@ class AndroidTranslationHelper
 
   def valid_lang?(lang)
     return false if lang.nil?
-
-    if @strings[lang].nil?
-      cache_strings(lang)
-      return false if @strings[lang].nil?
-    end
-
-    return false if lang == 'en'
+    return false if lang == 'en' # Not valid to edit en through web
+    return false if not Language::Languages.has_value?(lang)
 
     true
   end
 
+  public
   def show_translate_form(lang)
     return NOT_FOUND unless valid_lang?(lang)
+
+    xx_strings = @storage.get_strings(lang)
 
     p = AthPage.new()
     p.title = "Translate to #{Language::Languages.key(lang)}"
@@ -133,6 +116,8 @@ class AndroidTranslationHelper
 
     # Doesn't account for words that don't fit at the end starting new lines, but gets plenty close for now
     count_rows = lambda do |s|
+      return nil if s.nil?
+
       col = 1
       row = 1
 
@@ -162,7 +147,7 @@ class AndroidTranslationHelper
       xx_rows = count_rows.call(xx_string) || en_rows
 
       en_gecko_hack = xx_gecko_hack = ""
-      if @gecko then
+      if @gecko_p then
         en_gecko_hack = %Q{style="height:#{en_rows * 1.3}em;"}
         xx_gecko_hack = %Q{style="height:#{xx_rows * 1.3}em;"}
       end
@@ -180,21 +165,21 @@ class AndroidTranslationHelper
 
     p.add %Q{<form action="" method="post">}
 
-    @strings['en'].each do |name, hash|
-      add_string.call(name, hash, @strings[lang][name])
+    @en_strings[:strings].each do |name, hash|
+      add_string.call(name, hash, xx_strings[:strings][name])
     end
 
-    @str_ars['en'].each do |name, array|
+    @en_strings[:str_ars].each do |name, array|
       i = 0
       array.each do |hash|
-        add_string.call(name + "[#{i}]", hash, @str_ars[lang][name][i])
+        add_string.call(name + "[#{i}]", hash, xx_strings[:str_ars][name][i])
         i += 1
       end
     end
 
-    @str_pls['en'].each do |name, plural|
+    @en_strings[:str_pls].each do |name, plural|
       %w(zero one two few many other).each do |quantity|
-        add_string.call(name + "[#{quantity}]", plural[quantity], @str_pls[lang][name][quantity])
+        add_string.call(name + "[#{quantity}]", plural[quantity], xx_strings[:str_pls][name][quantity])
       end
     end
 
@@ -235,8 +220,7 @@ class AndroidTranslationHelper
           str_ars[key] = []
 
           value.each do |i, v|
-            str_ars[key][i] = quote_or_clean.call(escape_quotes.call(validate_tags(v)),
-                                                  @strings['en'][key][i][:quoted])
+            str_ars[key][i] = {:string => value, :quoted => @en_strings[:str_ars][key][i][:quoted]}
           end
         else
           str_pls[key] = {}
@@ -244,13 +228,11 @@ class AndroidTranslationHelper
           value.each do |q, v|
             next if v.empty?
 
-            str_pls[key][q] = quote_or_clean.call(escape_quotes.call(validate_tags(v)),
-                                                  @strings['en'][key][q][:quoted])
+            str_pls[key][q] = {:string => value, :quoted => @en_strings[:str_pls][key][q][:quoted]}
           end
         end
       else
-        strings[key] = quote_or_clean.call(escape_quotes.call(validate_tags(value)),
-                                           @strings['en'][key][:quoted])
+        strings[key] = {:string => value, :quoted => @en_strings[:strings][key][:quoted]}
       end
     end
 
@@ -266,102 +248,6 @@ class AndroidTranslationHelper
     s << "<br />\nEnvironment:<br />\n"
     @env.each do |key, value|
       s << "* #{key} =&gt; #{CGI.escapeHTML(value.to_s)}<br />\n"
-    end
-
-    s
-  end
-
-  # Makes sure tags are all clean and properly matched; necessary to avoid corrupting XML file
-  def validate_tags(s)
-    s = s.gsub(/(<)\s*/, '\1').gsub(/(<\/)\s*/, '\1').gsub(/\s*(>)/, '\1')
-
-    open_tags = []
-    cur_tag = nil
-    cur_tag_extras = nil
-    is_end_tag = false
-    failure = false
-
-    validate_attrs = lambda do |s|
-      return if s.nil?
-      s = s.gsub(/\s+/, ' ').gsub(/\s*=\s*/, '=').strip
-      failure = !s.match(/^([a-z]+="[^"]*"\s*)*\/?$/)
-    end
-
-    i = 0
-    while (i < s.length) do
-      c = s[i]
-
-      if c == '<'
-        if cur_tag
-          s.slice!(i)
-
-          next
-        else
-          cur_tag = String.new
-          cur_tag_extras = nil
-          is_end_tag = false
-        end
-      elsif c == '>'
-        if cur_tag
-          if cur_tag.length > 0
-            if is_end_tag
-              if cur_tag_extras and cur_tag_extras.strip.length > 0
-                failure = true
-                break
-              elsif cur_tag == open_tags.last
-                open_tags.pop
-                cur_tag = nil
-              else
-                failure = true
-                break
-              end
-            else
-              if s[i-1] != '/'
-                open_tags.push(cur_tag)
-              end
-
-              validate_attrs.call(cur_tag_extras)
-              break if failure
-
-              cur_tag = nil
-            end
-          else
-            if is_end_tag
-              s.slice!(i-2..i)
-              i -= 2
-            else
-              s.slice!(i-1..i)
-              i -= 1
-            end
-
-            cur_tag = nil
-            next
-          end
-        else
-          s.slice!(i)
-
-          next
-        end
-      elsif c == ' ' and cur_tag and not cur_tag_extras
-        cur_tag_extras = String.new
-      elsif c == '/' and s[i-1] == '<'
-        is_end_tag = true
-      elsif cur_tag
-        if not cur_tag_extras
-          cur_tag << c
-        else
-          cur_tag_extras << c
-        end
-      end
-
-      i += 1
-    end
-
-    failure = true if not open_tags.empty?
-    failure = true if cur_tag
-
-    if failure
-      s = s.gsub(/<|>/, '')
     end
 
     s

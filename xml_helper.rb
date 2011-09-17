@@ -1,7 +1,7 @@
 require 'nokogiri'
 require 'cgi'
 
-class XMLHelper
+module XMLHelper
   def self.xml_to_str(xml)
     strings = {}
     str_ars = {}
@@ -58,7 +58,7 @@ class XMLHelper
       :str_pls => str_pls }
   end
 
-  def self.str_to_xml(s)
+  def self.str_to_xml(strings)
     doc = Nokogiri::XML('')
     res = Nokogiri::XML::Node.new('resources', doc)
     doc.add_child(res)
@@ -86,55 +86,149 @@ class XMLHelper
       s
     end
 
-    quote_or_clean = lambda do |s, quote|
-      return %Q{"#{s}"} if quote
+    quote_or_clean = lambda do |s, quote_p|
+      return %Q{"#{s}"} if quote_p
 
       s.gsub(/\r|\n/, '').gsub(/\s+/, ' ').strip
     end
 
-    params.each do |key, value|
-      next if value.empty?
-
-      if value.is_a? Hash
-        next if all_empty.call(value)
-
-        if value.has_key? '0'
-          str_ar = Nokogiri::XML::Node.new('string-array', doc)
-          str_ar['name'] = key
-
-          value.each do |i, v|
-            item = Nokogiri::XML::Node.new('item', doc)
-            item.content = quote_or_clean.call(escape_quotes.call(validate_tags(v)),
-                                               @strings['en'][key][i][:quoted])
-            str_ar.add_child(item)
-          end
-
-          res.add_child(str_ar)
-        else
-          str_pl = Nokogiri::XML::Node.new('plurals', doc)
-          str_pl['name'] = key
-
-          value.each do |q, v|
-            next if v.empty?
-            item = Nokogiri::XML::Node.new('item', doc)
-            item['quantity'] = q
-            item.content = quote_or_clean.call(escape_quotes.call(validate_tags(v)),
-                                               @strings['en'][key][q][:quoted])
-            str_pl.add_child(item)
-          end
-
-          res.add_child(str_pl)
-        end
-      else
+    strings[:strings].each do |key, value|
         str = Nokogiri::XML::Node.new('string', doc)
         str['name'] = key
         str['formatted'] = 'false'
-        str.content = quote_or_clean.call(escape_quotes.call(validate_tags(value)),
-                                          @strings['en'][key][:quoted])
+        str.content = quote_or_clean.call(escape_quotes.call(validate_tags(value[:string])),
+                                          value[:quoted])
         res.add_child(str)
+    end
+
+    strings[:str_ars].each do |key, value|
+      str_ar = Nokogiri::XML::Node.new('string-array', doc)
+      str_ar['name'] = key
+
+      value.each_with_index do |v, i|
+        item = Nokogiri::XML::Node.new('item', doc)
+        item.content = quote_or_clean.call(escape_quotes.call(validate_tags(v[:string])),
+                                           v[:quoted])
+        str_ar.add_child(item)
       end
+
+      res.add_child(str_ar)
+    end
+
+    strings[:str_pls].each do |key, value|
+      str_pl = Nokogiri::XML::Node.new('plurals', doc)
+      str_pl['name'] = key
+
+      value.each do |q, v|
+        next if v.empty?
+        item = Nokogiri::XML::Node.new('item', doc)
+        item['quantity'] = q
+        item.content = quote_or_clean.call(escape_quotes.call(validate_tags(v[:string])),
+                                           v[:quoted])
+        str_pl.add_child(item)
+      end
+
+      res.add_child(str_pl)
     end
 
     CGI.unescapeHTML(doc.to_xml(:encoding => 'utf-8'))
+  end
+
+  private
+
+  # Makes sure tags are all clean and properly matched; necessary to avoid corrupting XML file
+  def self.validate_tags(s)
+    s = s.gsub(/(<)\s*/, '\1').gsub(/(<\/)\s*/, '\1').gsub(/\s*(>)/, '\1')
+
+    open_tags = []
+    cur_tag = nil
+    cur_tag_extras = nil
+    is_end_tag = false
+    failure = false
+
+    validate_attrs = lambda do |s|
+      return if s.nil?
+      s = s.gsub(/\s+/, ' ').gsub(/\s*=\s*/, '=').strip
+      failure = !s.match(/^([a-z]+="[^"]*"\s*)*\/?$/)
+    end
+
+    i = 0
+    while (i < s.length) do
+      c = s[i]
+
+      if c == '<'
+        if cur_tag
+          s.slice!(i)
+
+          next
+        else
+          cur_tag = String.new
+          cur_tag_extras = nil
+          is_end_tag = false
+        end
+      elsif c == '>'
+        if cur_tag
+          if cur_tag.length > 0
+            if is_end_tag
+              if cur_tag_extras and cur_tag_extras.strip.length > 0
+                failure = true
+                break
+              elsif cur_tag == open_tags.last
+                open_tags.pop
+                cur_tag = nil
+              else
+                failure = true
+                break
+              end
+            else
+              if s[i-1] != '/'
+                open_tags.push(cur_tag)
+              end
+
+              validate_attrs.call(cur_tag_extras)
+              break if failure
+
+              cur_tag = nil
+            end
+          else
+            if is_end_tag
+              s.slice!(i-2..i)
+              i -= 2
+            else
+              s.slice!(i-1..i)
+              i -= 1
+            end
+
+            cur_tag = nil
+            next
+          end
+        else
+          s.slice!(i)
+
+          next
+        end
+      elsif c == ' ' and cur_tag and not cur_tag_extras
+        cur_tag_extras = String.new
+      elsif c == '/' and s[i-1] == '<'
+        is_end_tag = true
+      elsif cur_tag
+        if not cur_tag_extras
+          cur_tag << c
+        else
+          cur_tag_extras << c
+        end
+      end
+
+      i += 1
+    end
+
+    failure = true if not open_tags.empty?
+    failure = true if cur_tag
+
+    if failure
+      s = s.gsub(/<|>/, '')
+    end
+
+    s
   end
 end

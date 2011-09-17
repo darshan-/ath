@@ -1,5 +1,6 @@
 require 'aws/s3'
 require './secret.rb'
+require './xml_helper.rb'
 require './nicer_nil.rb'
 
 class S3Storage
@@ -23,11 +24,11 @@ class S3Storage
   end
 
   def put_strings(lang, strings)
-    strings_xml = XMLHelper.str_to_xml(strings)
+    xml_str = XMLHelper.str_to_xml(strings)
 
     o = AWS::S3::Bucket.find('ath-bi-strings').new_object()
     o.key = AWS::S3::Bucket.find('ath-bi-strings').objects(:prefix => lang + '_').last.key.next || lang + '_000001'
-    o.value = strings_xml
+    o.value = xml_str
     o.store
   end
 end

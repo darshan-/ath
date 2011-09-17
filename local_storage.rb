@@ -1,3 +1,4 @@
+require './xml_helper.rb'
 require './nicer_nil.rb'
 
 class LocalStorage
@@ -20,20 +21,22 @@ class LocalStorage
   end
 
   def get_strings(lang)
-    string = ''
+    xml_str = ''
 
     in_dir do
       filename = Dir.glob("#{lang}_*").sort.last
-      File.open(filename) {|f| string = f.read()}
+      File.open(filename) {|f| xml_str = f.read()}
     end
 
-    string
+    XMLHelper.xml_to_str(xml_str)
   end
 
-  def put_strings(lang, strings_xml)
+  def put_strings(lang, strings)
+    xml_str = XMLHelper.str_to_xml(strings)
+
     in_dir do
       filename = Dir.glob("#{lang}_*").sort.last.next || lang + '_000001'
-      File.open(filename, 'w') {|f| f.write(strings_xml)}
+      File.open(filename, 'w') {|f| f.write(xml_str)}
     end
   end
 

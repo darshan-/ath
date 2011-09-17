@@ -3,6 +3,7 @@ require 'mongo'
 class MongoStorage
   def initialize()
     @db = Mongo::Connection.new.db("test_ath_bi")
+    # TODO: exit cleanly (and clearly) if mongod not running...
   end
 
   def get_langs()

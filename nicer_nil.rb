@@ -4,4 +4,6 @@ class NilClass
   def next()    self end
   def [](*args) self end
   def empty?()  true end
+
+  #def each_char(*args) self end
 end

@@ -1,4 +1,7 @@
 #!/usr/bin/env ruby
+# encoding: utf-8
+
+Encoding.default_internal = 'utf-8'
 
 require 'rack'
 require './ath.rb'

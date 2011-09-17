@@ -1,3 +1,5 @@
+# encoding: utf-8
+
 class NilClass
   def value()   self end
   def key()     self end

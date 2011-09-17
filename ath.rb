@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+# encoding: utf-8
+
 require 'cgi'
 require './s3_storage.rb'
 require './local_storage.rb'
@@ -54,7 +55,7 @@ class AndroidTranslationHelper
       reload_en()
     elsif @path[0] == 'translate_to'
       if m == 'POST'
-        post_translate_form(@path[1])
+        post_translate_form(@path[1], Rack::Request.new(@env).params)
       else
         show_translate_form(@path[1])
       end
@@ -115,7 +116,6 @@ class AndroidTranslationHelper
     true
   end
 
-  public
   def show_translate_form(lang)
     return NOT_FOUND unless valid_lang?(lang)
 
@@ -201,16 +201,15 @@ class AndroidTranslationHelper
     [200, {'Content-Type' => 'text/html'}, p.generate]
   end
 
-  def post_translate_form(lang)
+  def post_translate_form(lang, params)
     return NOT_FOUND unless valid_lang?(lang)
-
-    params = Rack::Request.new(@env).params
 
     anchor = nil
     params.each_key do |key|
       if key.match(/^_ath_submit_(.*)/)
         anchor = $1;
         params.delete(key)
+        break
       end
     end
 
@@ -232,22 +231,21 @@ class AndroidTranslationHelper
         if value.has_key? '0'
           str_ars[key] = []
 
-          puts value
-          value.each do |i, v|
-            str_ars[key][i.to_i] = {:string => value, :quoted => @en_strings[:str_ars][key][i][:quoted]}
+          value.each do |k, v|
+            i = k.to_i
+            str_ars[key][i] = {:string => v, :quoted => @strings['en'][:str_ars][key][i][:quoted]}
           end
         else
           str_pls[key] = {}
 
-          puts value
           value.each do |q, v|
             next if v.empty?
 
-            str_pls[key][q] = {:string => value, :quoted => @en_strings[:str_pls][key][q][:quoted]}
+            str_pls[key][q] = {:string => v, :quoted => @strings['en'][:str_pls][key][q][:quoted]}
           end
         end
       else
-        strings[key] = {:string => value, :quoted => @en_strings[:strings][key][:quoted]}
+        strings[key] = {:string => value, :quoted => @strings['en'][:strings][key][:quoted]}
       end
     end
 

@@ -1,10 +1,11 @@
+# encoding: utf-8
+
 # Darshan's Simple Template System
-
 # Version 6
-
+#
 # On gentoo, this should reside at: /usr/lib/ruby/site_ruby/1.8/dsts.rb
 #   (not sure for other systems; maybe the same place?)
-
+#
 # TODO:
 #
 #  support stylesheet titles?

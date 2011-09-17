@@ -1,3 +1,5 @@
+# encoding: utf-8
+
 require 'aws/s3'
 require './secret.rb'
 require './xml_helper.rb'

@@ -1,3 +1,5 @@
+# encoding: utf-8
+
 require './dsts.rb'
 
 class AthPage < XhtmlPage

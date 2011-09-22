@@ -23,11 +23,11 @@ module XMLHelper
       s = s.gsub(/\s*\\n\s*/, '\n').gsub(/\s+/, ' ').gsub(/\\n/, "\\n\n").gsub(/\\("|')/, '\1').strip
 
       if s[0] == '"' and s[s.length-1] == '"' then
-        h[:quoted] = true
+        h['quoted'] = true
         s = s[1, s.length-2]
       end
 
-      h[:string] = s
+      h['string'] = s
 
       h
     end
@@ -97,8 +97,8 @@ module XMLHelper
         str = Nokogiri::XML::Node.new('string', doc)
         str['name'] = key
         str['formatted'] = 'false'
-        str.content = quote_or_clean.call(escape_quotes.call(validate_tags(value[:string])),
-                                          value[:quoted])
+        str.content = quote_or_clean.call(escape_quotes.call(validate_tags(value['string'])),
+                                          value['quoted'])
         res.add_child(str)
     end
 
@@ -108,8 +108,8 @@ module XMLHelper
 
       value.each_with_index do |v, i|
         item = Nokogiri::XML::Node.new('item', doc)
-        item.content = quote_or_clean.call(escape_quotes.call(validate_tags(v[:string])),
-                                           v[:quoted])
+        item.content = quote_or_clean.call(escape_quotes.call(validate_tags(v['string'])),
+                                           v['quoted'])
         str_ar.add_child(item)
       end
 
@@ -124,8 +124,8 @@ module XMLHelper
         next if v.empty?
         item = Nokogiri::XML::Node.new('item', doc)
         item['quantity'] = q
-        item.content = quote_or_clean.call(escape_quotes.call(validate_tags(v[:string])),
-                                           v[:quoted])
+        item.content = quote_or_clean.call(escape_quotes.call(validate_tags(v['string'])),
+                                           v['quoted'])
         str_pl.add_child(item)
       end
 

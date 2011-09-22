@@ -154,8 +154,8 @@ class AndroidTranslationHelper
 
       cols = TA_COLS
       
-      en_string = en_hash[:string]
-      xx_string = xx_hash[:string]
+      en_string = en_hash['string']
+      xx_string = xx_hash['string']
       en_rows = count_rows.call(en_string) || 1
       xx_rows = count_rows.call(xx_string) || en_rows
 
@@ -170,7 +170,7 @@ class AndroidTranslationHelper
       p.add %Q{#{lang}:<br />\n<textarea name="#{name}" }
       p.add %Q{cols="#{cols}" rows="#{xx_rows}" #{xx_gecko_hack}>#{xx_string}</textarea>\n}
 
-      if en_hash[:quoted] then
+      if en_hash['quoted'] then
         p.add %Q{<br />*<i>Spaces at the beginning and/or end of this one are important.</i> }
         p.add %Q{<b>Be sure to match the original</b> (unless you really should do something different in your language).}
       end
@@ -233,7 +233,7 @@ class AndroidTranslationHelper
 
           value.each do |k, v|
             i = k.to_i
-            str_ars[key][i] = {:string => v, :quoted => @strings['en'][:str_ars][key][i][:quoted]}
+            str_ars[key][i] = {'string' => v, 'quoted' => @strings['en'][:str_ars][key][i]['quoted']}
           end
         else
           str_pls[key] = {}
@@ -241,11 +241,11 @@ class AndroidTranslationHelper
           value.each do |q, v|
             next if v.empty?
 
-            str_pls[key][q] = {:string => v, :quoted => @strings['en'][:str_pls][key][q][:quoted]}
+            str_pls[key][q] = {'string' => v, 'quoted' => @strings['en'][:str_pls][key][q]['quoted']}
           end
         end
       else
-        strings[key] = {:string => value, :quoted => @strings['en'][:strings][key][:quoted]}
+        strings[key] = {'string' => value, 'quoted' => @strings['en'][:strings][key]['quoted']}
       end
     end
 

@@ -14,7 +14,7 @@ class LocalStorage
     langs = []
 
     in_dir do
-      Dir.glob('*_*').each do |filename|
+      Dir.glob('*_*').to_a.each do |filename|
         langs << filename.split('_').first
       end
     end

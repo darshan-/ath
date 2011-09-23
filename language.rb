@@ -28,6 +28,7 @@ module Language
     'Norwegian bokmål' => 'nb',
     'Polish' => 'pl',
     'Portuguese' => 'pt',
+    'Portuguese, Brazil' => 'ptBR',
     'Romanian' => 'ro',
     'Russian' => 'ru',
     'Serbian' => 'sr',

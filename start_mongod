@@ -1,0 +1,7 @@
+#!/bin/bash
+
+mkdir -p ~/.mongo/db
+
+mongod --nojournal --auth --smallfiles -nssize 4 --fork --dbpath ~/.mongo/db --logpath /home/darshan/.mongo/log
+
+sleep 0.1

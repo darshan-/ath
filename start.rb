@@ -7,9 +7,7 @@ require 'rack'
 require './ath.rb'
 
 BASE_PORT = 8080
-# Cached strings will be stale in all but the saving server when someone updates them,
-#  so you can only have one server
-MAX_SERVERS = 1
+MAX_SERVERS = 1 # Only one actually allowed with current ATH design (strings in memory)
 LOG_FILE = './run/log'
 PID_FILE = './run/pid'
 
@@ -18,6 +16,11 @@ $stdout = File.open(LOG_FILE, 'a')
 
 if File.exists?(PID_FILE) then
   stdout.puts "Error: #{PID_FILE} exists"
+  exit 1
+end
+
+if not system("ps -A | grep mongod >/dev/null")
+  stdout.puts "Error: mongod does not appear to be running"
   exit 1
 end
 

@@ -3,9 +3,6 @@
 
 Encoding.default_internal = 'utf-8'
 
-require 'rack'
-require './ath.rb'
-
 BASE_PORT = 8080
 MAX_SERVERS = 1 # Only one actually allowed with current ATH design (strings in memory)
 LOG_FILE = './run/log'
@@ -19,13 +16,15 @@ if File.exists?(PID_FILE) then
   exit 1
 end
 
-if not system("ps -A | grep mongod >/dev/null")
+if not system("ps -C mongod >/dev/null")
   stdout.puts "Error: mongod does not appear to be running"
   exit 1
 end
 
-port = BASE_PORT
+require 'rack'
+require './ath.rb'
 
+port = BASE_PORT
 servers = ARGV[0].to_i
 
 if servers < 1 then

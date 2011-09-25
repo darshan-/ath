@@ -8,23 +8,6 @@ require './language.rb'
 require './dsts-ext.rb'
 require 'benchmark'
 
-
-# strings structure:
-#
-# {'string name'       => {'string'      => 'string content',
-#                          'quoted'      => bool,
-#                          'modified_at' => timestamp},
-#
-#  'string array name' => [{'string'      => 'zeroeth string content',
-#                           'quoted'      => bool,
-#                           'modified_at' => timestamp}, ...],
-#
-# 'string plural name' => {'zero' => {'string'      => 'zeroeth string content',
-#                                     'quoted'      => bool,
-#                                     'modified_at' => timestamp}, ...}, ... }
-
-
-
 class AndroidTranslationHelper
   TA_COLS = 80 # How many columns to use for the strings' textareas
   NOT_FOUND = [404, {'Content-Type' => 'text/plain'}, '404 - Not Found' + ' '*512] # Padded so Chrome shows the 404

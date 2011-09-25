@@ -10,6 +10,6 @@ fi
 
 servers=`wc $PID_FILE | awk '{print $1;}'`
 
-./stop
+bin/stop
 
-./start $servers
+bin/start $servers

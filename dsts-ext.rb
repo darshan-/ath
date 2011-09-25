@@ -1,6 +1,6 @@
 # encoding: utf-8
 
-require './dsts.rb'
+require './lib/dsts.rb'
 
 class AthPage < XhtmlPage
   def initialize()

@@ -1,7 +1,7 @@
 # encoding: utf-8
 
 require './xml_helper.rb'
-require './nicer_nil.rb'
+require './lib/nicer_nil.rb'
 
 class LocalStorage
   DIR_NAME = 'tmp-local-storage'

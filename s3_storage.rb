@@ -3,7 +3,7 @@
 require 'aws/s3'
 require './secret.rb'
 require './xml_helper.rb'
-require './nicer_nil.rb'
+require './lib/nicer_nil.rb'
 
 class S3Storage
   def initialize()

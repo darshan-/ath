@@ -11,7 +11,7 @@ require 'benchmark'
 class AndroidTranslationHelper
   TA_COLS = 80 # How many columns to use for the strings' textareas
   NOT_FOUND = [404, {'Content-Type' => 'text/plain'}, '404 - Not Found' + ' '*512] # Padded so Chrome shows the 404
-  STORAGE_CLASS = LocalStorage
+  STORAGE_CLASS = MongoStorage
 
   def initialize()
     @storage = STORAGE_CLASS.new
@@ -178,21 +178,21 @@ class AndroidTranslationHelper
 
     p.add %Q{<form action="" method="post">}
 
-    @strings['en'][:strings].each do |name, hash|
-      add_string.call(name, hash, @strings[lang][:strings][name])
-    end
+    @strings['en'].each do |name, content|
+      hint = content.first[1]
 
-    @strings['en'][:str_ars].each do |name, array|
-      i = 0
-      array.each do |hash|
-        add_string.call(name + "[#{i}]", hash, @strings[lang][:str_ars][name][i])
-        i += 1
-      end
-    end
-
-    @strings['en'][:str_pls].each do |name, plural|
-      %w(zero one two few many other).each do |quantity|
-        add_string.call(name + "[#{quantity}]", plural[quantity], @strings[lang][:str_pls][name][quantity])
+      if hint.is_a? String  # string
+        add_string.call(name, content, @strings[lang][name])
+      elsif hint.is_a? Hash # plural
+        %w(zero one two few many other).each do |quantity|
+          add_string.call(name + "[#{quantity}]", content[quantity], @strings[lang][name][quantity])
+        end
+      else                  # string-array
+        i = 0
+        content.each do |str_hash|
+          add_string.call(name + "[#{i}]", str_hash, @strings[lang][name][i])
+          i += 1
+        end
       end
     end
 
@@ -219,8 +219,6 @@ class AndroidTranslationHelper
     end
 
     strings = {}
-    str_ars = {}
-    str_pls = {}
 
     params.each do |key, value|
       next if value.empty?
@@ -229,27 +227,27 @@ class AndroidTranslationHelper
         next if all_empty.call(value)
 
         if value.has_key? '0'
-          str_ars[key] = []
+          strings[key] = []
 
           value.each do |k, v|
             i = k.to_i
-            str_ars[key][i] = {'string' => v, 'quoted' => @strings['en'][:str_ars][key][i]['quoted']}
+            strings[key][i] = {'string' => v, 'quoted' => @strings['en'][key][i]['quoted']}
           end
         else
-          str_pls[key] = {}
+          strings[key] = {}
 
           value.each do |q, v|
             next if v.empty?
 
-            str_pls[key][q] = {'string' => v, 'quoted' => @strings['en'][:str_pls][key][q]['quoted']}
+            strings[key][q] = {'string' => v, 'quoted' => @strings['en'][key][q]['quoted']}
           end
         end
       else
-        strings[key] = {'string' => value, 'quoted' => @strings['en'][:strings][key]['quoted']}
+        strings[key] = {'string' => value, 'quoted' => @strings['en'][key]['quoted']}
       end
     end
 
-    @strings[lang] = {:strings => strings, :str_ars => str_ars, :str_pls => str_pls}
+    @strings[lang] = strings
 
     @storage.put_strings(lang, @strings[lang])
 

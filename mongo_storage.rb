@@ -23,8 +23,16 @@ class MongoStorage
   end
 
   def put_strings(lang, strings)
-    c = @db.collection(lang)
+    #c = @db.collection(lang)
+    #c.insert(strings)
 
-    c.insert(strings)
+    # Switch to strings being a flat Hash, where keys are Strings and values are what they are (String, Array, or Hash)
+
+    strings.each do |key, value|
+      next if true #the key already exists in the collection and the content (String, Array, or Hash) is exactly the same)
+    
+      # Insert into collection with 'name' => key, 'updated' => Time.now, 'string'/'str_ar'/'str_pl' => value
+                                                                          # (or just use 'content' rather than saying what it is?)
+    end
   end
 end

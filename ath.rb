@@ -11,7 +11,7 @@ require 'benchmark'
 class AndroidTranslationHelper
   TA_COLS = 80 # How many columns to use for the strings' textareas
   NOT_FOUND = [404, {'Content-Type' => 'text/plain'}, '404 - Not Found' + ' '*512] # Padded so Chrome shows the 404
-  STORAGE_CLASS = MongoStorage
+  STORAGE_CLASS = LocalStorage
 
   def initialize()
     @storage = STORAGE_CLASS.new
@@ -149,7 +149,7 @@ class AndroidTranslationHelper
 
     add_string = lambda do |name, en_hash, xx_hash|
       anchor_name = name.gsub(/\[|\]/, '')
-      p.add %Q{<hr><div><a name="#{anchor_name}"><b>#{name}#{'*' if en_hash[:quoted]}</b></a>}
+      p.add %Q{<hr><div><a name="#{anchor_name}"><b>#{name}#{'*' if en_hash['quoted']}</b></a>}
       p.add %Q{<input style="float: right;" type="submit" name="_ath_submit_#{anchor_name}" value="Save All" /></div>\n}
 
       cols = TA_COLS
@@ -178,20 +178,18 @@ class AndroidTranslationHelper
 
     p.add %Q{<form action="" method="post">}
 
-    @strings['en'].each do |name, content|
-      hint = content.first[1]
-
-      if hint.is_a? String  # string
-        add_string.call(name, content, @strings[lang][name])
-      elsif hint.is_a? Hash # plural
-        %w(zero one two few many other).each do |quantity|
-          add_string.call(name + "[#{quantity}]", content[quantity], @strings[lang][name][quantity])
-        end
-      else                  # string-array
+    @strings['en'].each do |key, value|
+      if value.is_a? Array          # string-array
         i = 0
-        content.each do |str_hash|
-          add_string.call(name + "[#{i}]", str_hash, @strings[lang][name][i])
+        value.each do |str_hash|
+          add_string.call(key + "[#{i}]", str_hash, @strings[lang][key][i])
           i += 1
+        end
+      elsif value.has_key? 'string' # string
+        add_string.call(key, value, @strings[lang][key])
+      else                          # plural
+        %w(zero one two few many other).each do |quantity|
+          add_string.call(key + "[#{quantity}]", value[quantity], @strings[lang][key][quantity])
         end
       end
     end

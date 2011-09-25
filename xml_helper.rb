@@ -5,8 +5,6 @@ require 'cgi'
 module XMLHelper
   def self.xml_to_str(xml)
     strings = {}
-    str_ars = {}
-    str_pls = {}
 
     parse_string = lambda do |element|
       h = {}
@@ -39,24 +37,22 @@ module XMLHelper
     end
 
     doc.xpath('//string-array').each do |sa_el|
-      str_ars[sa_el.attr('name')] = []
+      strings[sa_el.attr('name')] = []
 
       sa_el.element_children.each_with_index do |item_el, i|
-        str_ars[sa_el.attr('name')][i] = parse_string.call(item_el)
+        strings[sa_el.attr('name')][i] = parse_string.call(item_el)
       end
     end
 
     doc.xpath('//plurals').each do |sp_el|
-      str_pls[sp_el.attr('name')] = {}
+      strings[sp_el.attr('name')] = {}
 
       sp_el.element_children.each do |item_el|
-        str_pls[sp_el.attr('name')][item_el.attr('quantity')] = parse_string.call(item_el)
+        strings[sp_el.attr('name')][item_el.attr('quantity')] = parse_string.call(item_el)
       end
     end
 
-    { :strings => strings,
-      :str_ars => str_ars,
-      :str_pls => str_pls }
+    strings
   end
 
   def self.str_to_xml(strings)
@@ -93,43 +89,41 @@ module XMLHelper
       s.gsub(/\r|\n/, '').gsub(/\s+/, ' ').strip
     end
 
-    strings[:strings].each do |key, value|
+    strings.each do |key, value|
+      if value.is_a? Array          # string-array
+        str_ar = Nokogiri::XML::Node.new('string-array', doc)
+        str_ar['name'] = key
+
+        value.each_with_index do |v, i|
+          item = Nokogiri::XML::Node.new('item', doc)
+          item.content = quote_or_clean.call(escape_quotes.call(validate_tags(v['string'])),
+                                             v['quoted'])
+          str_ar.add_child(item)
+        end
+
+        res.add_child(str_ar)
+      elsif value.has_key? 'string' # string
         str = Nokogiri::XML::Node.new('string', doc)
         str['name'] = key
         str['formatted'] = 'false'
         str.content = quote_or_clean.call(escape_quotes.call(validate_tags(value['string'])),
                                           value['quoted'])
         res.add_child(str)
-    end
+      else                          # plural
+        str_pl = Nokogiri::XML::Node.new('plurals', doc)
+        str_pl['name'] = key
 
-    strings[:str_ars].each do |key, value|
-      str_ar = Nokogiri::XML::Node.new('string-array', doc)
-      str_ar['name'] = key
+        value.each do |q, v|
+          next if v.empty?
+          item = Nokogiri::XML::Node.new('item', doc)
+          item['quantity'] = q
+          item.content = quote_or_clean.call(escape_quotes.call(validate_tags(v['string'])),
+                                             v['quoted'])
+          str_pl.add_child(item)
+        end
 
-      value.each_with_index do |v, i|
-        item = Nokogiri::XML::Node.new('item', doc)
-        item.content = quote_or_clean.call(escape_quotes.call(validate_tags(v['string'])),
-                                           v['quoted'])
-        str_ar.add_child(item)
+        res.add_child(str_pl)
       end
-
-      res.add_child(str_ar)
-    end
-
-    strings[:str_pls].each do |key, value|
-      str_pl = Nokogiri::XML::Node.new('plurals', doc)
-      str_pl['name'] = key
-
-      value.each do |q, v|
-        next if v.empty?
-        item = Nokogiri::XML::Node.new('item', doc)
-        item['quantity'] = q
-        item.content = quote_or_clean.call(escape_quotes.call(validate_tags(v['string'])),
-                                           v['quoted'])
-        str_pl.add_child(item)
-      end
-
-      res.add_child(str_pl)
     end
 
     CGI.unescapeHTML(doc.to_xml(:encoding => 'utf-8'))

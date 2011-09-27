@@ -1,6 +1,7 @@
 # encoding: utf-8
 
 require 'mongo'
+require './lib/nicer_nil.rb'
 
 class MongoStorage
   def initialize()
@@ -16,8 +17,10 @@ class MongoStorage
     strings = {}
     c = @db.collection(lang)
 
-    c.distinct('name').each do |name|
-      strings[name] = c.find_one({'name' => name}, {:sort => ['hash.updated', :desc]})['hash']
+    c.find.each_entry do |entry|
+      if strings[entry['name']].nil? || strings[entry['name']]['modified_at'] < entry['hash']['modified_at']
+        strings[entry['name']] = entry['hash']
+      end
     end
 
     strings
@@ -26,13 +29,13 @@ class MongoStorage
   def put_strings(lang, strings)
     c = @db.collection(lang)
 
-    strings.each do |name, hash|
-      next if c.find_one({'name' => name}, {:sort => ['hash.updated', :desc]})['hash']['string'] == hash['string']
+    old = get_strings(lang)
 
-      hash['updated'] = Time.now
+    strings.each do |name, hash|
+      next if old[name]['string'] == hash['string']
+
+      hash['modified_at'] = Time.now
       c.insert('name' => name, 'hash' => hash)
     end
-
-    c.ensure_index([['name', Mongo::ASCENDING], ['hash.updated', Mongo::DESCENDING]])
   end
 end

@@ -44,7 +44,7 @@ servers.times do
     File.open(PID_FILE, 'a') do |file|
       file.puts $$
     end
-    
+
     Rack::Handler::Thin.run(AndroidTranslationHelper.new(), :Host => '127.0.0.1', :Port => port)
   end
   sleep 0.01

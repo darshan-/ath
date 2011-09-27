@@ -37,18 +37,14 @@ module XMLHelper
     end
 
     doc.xpath('//string-array').each do |sa_el|
-      strings[sa_el.attr('name')] = []
-
       sa_el.element_children.each_with_index do |item_el, i|
-        strings[sa_el.attr('name')][i] = parse_string.call(item_el)
+        strings[sa_el.attr('name') << "[#{i}]"] = parse_string.call(item_el)
       end
     end
 
     doc.xpath('//plurals').each do |sp_el|
-      strings[sp_el.attr('name')] = {}
-
       sp_el.element_children.each do |item_el|
-        strings[sp_el.attr('name')][item_el.attr('quantity')] = parse_string.call(item_el)
+        strings[sp_el.attr('name') << "[:#{item_el.attr('quantity')}]"] = parse_string.call(item_el)
       end
     end
 
@@ -89,41 +85,48 @@ module XMLHelper
       s.gsub(/\r|\n/, '').gsub(/\s+/, ' ').strip
     end
 
+    str_ars = {}
+    str_pls = {}
+
     strings.each do |key, value|
-      if value.is_a? Array          # string-array
-        str_ar = Nokogiri::XML::Node.new('string-array', doc)
-        str_ar['name'] = key
-
-        value.each_with_index do |v, i|
-          item = Nokogiri::XML::Node.new('item', doc)
-          item.content = quote_or_clean.call(escape_quotes.call(validate_tags(v['string'])),
-                                             v['quoted'])
-          str_ar.add_child(item)
-        end
-
-        res.add_child(str_ar)
-      elsif value.has_key? 'string' # string
+      if not key =~ /\[/   # string
         str = Nokogiri::XML::Node.new('string', doc)
         str['name'] = key
         str['formatted'] = 'false'
         str.content = quote_or_clean.call(escape_quotes.call(validate_tags(value['string'])),
                                           value['quoted'])
         res.add_child(str)
-      else                          # plural
-        str_pl = Nokogiri::XML::Node.new('plurals', doc)
-        str_pl['name'] = key
+      elsif not key =~ /:/ # string-array
+        name = key.split('[').first
 
-        value.each do |q, v|
-          next if v.empty?
-          item = Nokogiri::XML::Node.new('item', doc)
-          item['quantity'] = q
-          item.content = quote_or_clean.call(escape_quotes.call(validate_tags(v['string'])),
-                                             v['quoted'])
-          str_pl.add_child(item)
-        end
+        str_ars[name] ||= Nokogiri::XML::Node.new('string-array', doc)
+        str_ars[name]['name'] = name
 
-        res.add_child(str_pl)
+        item = Nokogiri::XML::Node.new('item', doc)
+        item.content = quote_or_clean.call(escape_quotes.call(validate_tags(value['string'])),
+                                           value['quoted'])
+        str_ars[name].add_child(item)
+      else                 # plural
+        name = key.split('[').first
+        quantity = key.split(':')[1].split(']').first
+
+        str_pls[name] ||= Nokogiri::XML::Node.new('plurals', doc)
+        str_pls[name]['name'] = name
+
+        item = Nokogiri::XML::Node.new('item', doc)
+        item['quantity'] = quantity
+        item.content = quote_or_clean.call(escape_quotes.call(validate_tags(value['string'])),
+                                           value['quoted'])
+        str_pls[name].add_child(item)
       end
+    end
+
+    str_ars.values.each do |a|
+      res.add_child(a)
+    end
+
+    str_pls.values.each do |p|
+      res.add_child(p)
     end
 
     CGI.unescapeHTML(doc.to_xml(:encoding => 'utf-8'))

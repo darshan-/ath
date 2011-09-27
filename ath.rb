@@ -179,19 +179,7 @@ class AndroidTranslationHelper
     p.add %Q{<form action="" method="post">}
 
     @strings['en'].each do |key, value|
-      if value.is_a? Array          # string-array
-        i = 0
-        value.each do |str_hash|
-          add_string.call(key + "[#{i}]", str_hash, @strings[lang][key][i])
-          i += 1
-        end
-      elsif value.has_key? 'string' # string
-        add_string.call(key, value, @strings[lang][key])
-      else                          # plural
-        %w(zero one two few many other).each do |quantity|
-          add_string.call(key + "[#{quantity}]", value[quantity], @strings[lang][key][quantity])
-        end
-      end
+      add_string.call(key, value, @strings[lang][key])
     end
 
     p.add "</form>"
@@ -224,23 +212,19 @@ class AndroidTranslationHelper
       if value.is_a? Hash
         next if all_empty.call(value)
 
-        if value.has_key? '0'
-          strings[key] = []
-
+        if value.has_key? '0' # string-array
           value.each do |k, v|
             i = k.to_i
-            strings[key][i] = {'string' => v, 'quoted' => @strings['en'][key][i]['quoted']}
+            strings[key + "[#{i}]"] = {'string' => v, 'quoted' => @strings['en'][key + "[#{i}]"]['quoted']}
           end
-        else
-          strings[key] = {}
-
+        else                  # plural
           value.each do |q, v|
             next if v.empty?
 
-            strings[key][q] = {'string' => v, 'quoted' => @strings['en'][key][q]['quoted']}
+            strings[key + "[#{q}]"] = {'string' => v, 'quoted' => @strings['en'][key + "[#{q}]"]['quoted']}
           end
         end
-      else
+      else                    # string
         strings[key] = {'string' => value, 'quoted' => @strings['en'][key]['quoted']}
       end
     end

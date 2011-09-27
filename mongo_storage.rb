@@ -13,26 +13,26 @@ class MongoStorage
   end
 
   def get_strings(lang)
+    strings = {}
     c = @db.collection(lang)
 
-    strs = c.find_one()
+    c.distinct('name').each do |name|
+      strings[name] = c.find_one({'name' => name}, {:sort => ['hash.updated', :desc]})['hash']
+    end
 
-    { :strings => strs['strings'],
-      :str_ars => strs['str_ars'],
-      :str_pls => strs['str_pls'] }
+    strings
   end
 
   def put_strings(lang, strings)
-    #c = @db.collection(lang)
-    #c.insert(strings)
+    c = @db.collection(lang)
 
-    # Switch to strings being a flat Hash, where keys are Strings and values are what they are (String, Array, or Hash)
+    strings.each do |name, hash|
+      next if c.find_one({'name' => name}, {:sort => ['hash.updated', :desc]})['hash']['string'] == hash['string']
 
-    strings.each do |key, value|
-      next if true #the key already exists in the collection and the content (String, Array, or Hash) is exactly the same)
-    
-      # Insert into collection with 'name' => key, 'updated' => Time.now, 'string'/'str_ar'/'str_pl' => value
-                                                                          # (or just use 'content' rather than saying what it is?)
+      hash['updated'] = Time.now
+      c.insert('name' => name, 'hash' => hash)
     end
+
+    c.ensure_index([['name', Mongo::ASCENDING], ['hash.updated', Mongo::DESCENDING]])
   end
 end

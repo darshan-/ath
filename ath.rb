@@ -11,7 +11,7 @@ require 'benchmark'
 class AndroidTranslationHelper
   TA_COLS = 80 # How many columns to use for the strings' textareas
   NOT_FOUND = [404, {'Content-Type' => 'text/plain'}, '404 - Not Found' + ' '*512] # Padded so Chrome shows the 404
-  STORAGE_CLASS = LocalStorage
+  STORAGE_CLASS = MongoStorage
 
   def initialize()
     @storage = STORAGE_CLASS.new

@@ -30,12 +30,15 @@ class MongoStorage
     c = @db.collection(lang)
 
     old = get_strings(lang)
+    update = []
 
     strings.each do |name, hash|
       next if old[name]['string'] == hash['string']
 
       hash['modified_at'] = Time.now
-      c.insert('name' => name, 'hash' => hash)
+      update.push('name' => name, 'hash' => hash)
     end
+
+    c.insert(update)
   end
 end

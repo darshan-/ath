@@ -4,3 +4,4 @@ secret.rb
 run
 tmp-local-storage
 README.html
+Gemfile.lock

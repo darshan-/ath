@@ -22,6 +22,7 @@ if not system("ps -C mongod >/dev/null")
 end
 
 require 'rack'
+require './lib/my_thin.rb'
 require './ath.rb'
 
 port = BASE_PORT

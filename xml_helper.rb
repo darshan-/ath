@@ -90,6 +90,7 @@ module XMLHelper
 
     strings.each do |key, value|
       if not key =~ /\[/   # string
+        next if value['string'].empty?
         str = Nokogiri::XML::Node.new('string', doc)
         str['name'] = key
         str['formatted'] = 'false'
@@ -107,6 +108,7 @@ module XMLHelper
                                            value['quoted'])
         str_ars[name].add_child(item)
       else                 # plural
+        next if value['string'].empty?
         name = key.split('[').first
         quantity = key.split(':')[1].split(']').first
 

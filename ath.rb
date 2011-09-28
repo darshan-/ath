@@ -199,39 +199,33 @@ class AndroidTranslationHelper
       end
     end
 
-    all_empty = lambda do |hash|
-      hash.each_value {|v| return false unless v.empty?}
-      return true
+    strings = {}
+    conflicts = {}
+
+    insert_value = lambda do |value, key|
+      strings[key] = {'string' => value, 'quoted' => @strings['en'][key]['quoted']}
     end
 
-    strings = {}
-
     params.each do |key, value|
-      next if value.empty?
-
       if value.is_a? Hash
-        next if all_empty.call(value)
-
         if value.has_key? '0' # string-array
           value.each do |k, v|
-            i = k.to_i
-            strings[key + "[#{i}]"] = {'string' => v, 'quoted' => @strings['en'][key + "[#{i}]"]['quoted']}
+            insert_value.call(v, key + "[#{k.to_i}]")
           end
         else                  # plural
           value.each do |q, v|
-            next if v.empty?
-
-            strings[key + "[#{q}]"] = {'string' => v, 'quoted' => @strings['en'][key + "[#{q}]"]['quoted']}
+            realkey = key + "[#{q}]"
+            next if v.empty? and @strings[lang][realkey].empty?
+            insert_value.call(v, realkey)
           end
         end
       else                    # string
-        strings[key] = {'string' => value, 'quoted' => @strings['en'][key]['quoted']}
+        next if value.empty? and @strings[lang][key].empty?
+        insert_value.call(value, key)
       end
     end
 
-    @strings[lang] = strings
-
-    @storage.put_strings(lang, @strings[lang])
+    @strings[lang] = @storage.put_strings(lang, strings)
 
     [302, {'Location' => @env['REQUEST_URI'] + '#' << anchor}, '302 Found']
   end

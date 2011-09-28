@@ -227,37 +227,43 @@ class AndroidTranslationHelper
     @conf_res_ins ||= IO.read('conflict_resolution_instructions.html')
     p.add @conf_res_ins
 
-    add_string = lambda do |name, your_string, their_string, quoted|
-      p.add %Q{<hr><div><b>#{name}#{'*' if quoted}</b>}
-      p.add %Q{<input style="float: right;" type="submit" value="Save All" /></div>\n} # TODO: Okay not having a submit name?
-
-      cols = TA_COLS
-      
-      your_rows = count_rows(your_string) || 1
-      their_rows = count_rows(their_string) || your_rows
-
-      your_gecko_hack = their_gecko_hack = ""
-      if @gecko_p then
-        your_gecko_hack = %Q{style="height:#{your_rows * 1.3}em;"}
-        their_gecko_hack = %Q{style="height:#{their_rows * 1.3}em;"}
-      end
-
-      p.add %Q{yours:<br />\n<textarea }
-      p.add %Q{cols="#{cols}" rows="#{your_rows}" #{your_gecko_hack} disabled="true">#{your_string}</textarea><br />\n}
-      p.add %Q{theirs:<br />\n<textarea name="#{name}" }
-      p.add %Q{cols="#{cols}" rows="#{their_rows}" #{their_gecko_hack}>#{their_string}</textarea>\n}
-
-      if quoted then
-        p.add %Q{<br />*<i>Spaces at the beginning and/or end of this one are important.</i> }
-      end
-    end
-
     p.add %Q{<form action="" method="post">}
     p.add %Q{<input type="hidden" name="_ath_translated_from" value="#{Time.now.to_f}" />\n}
     p.add %Q{<input type="hidden" name="_ath_submit_#{anchor}" value="1" />\n}
 
     conflicts.each do |key, value|
-      add_string.call(key, value['string'], @strings[lang][key]['string'], @strings['en'][key]['quoted'])
+      quoted = @strings['en'][key]['quoted']
+
+      p.add %Q{<hr><div><b>#{key}#{'*' if quoted}</b>}
+      p.add %Q{<input style="float: right;" type="submit" value="Save All" /></div>\n}
+
+      cols = TA_COLS
+
+      en_string = @strings['en'][key]['string']
+      your_string = value['string']
+      their_string = @strings[lang][key]['string']
+
+      en_rows = count_rows(en_string) || 1
+      your_rows = count_rows(your_string) || en_rows
+      their_rows = count_rows(their_string) || en_rows
+
+      en_gecko_hack = your_gecko_hack = their_gecko_hack = ""
+      if @gecko_p then
+        en_gecko_hack = %Q{style="height:#{en_rows * 1.3}em;"}
+        your_gecko_hack = %Q{style="height:#{your_rows * 1.3}em;"}
+        their_gecko_hack = %Q{style="height:#{their_rows * 1.3}em;"}
+      end
+
+      p.add %Q{en:<br />\n<textarea }
+      p.add %Q{cols="#{cols}" rows="#{en_rows}" #{en_gecko_hack} disabled="true">#{en_string}</textarea><br />\n}
+      p.add %Q{#{lang}-yours:<br />\n<textarea }
+      p.add %Q{cols="#{cols}" rows="#{your_rows}" #{your_gecko_hack} disabled="true">#{your_string}</textarea><br />\n}
+      p.add %Q{#{lang}-theirs:<br />\n<textarea name="#{key}" }
+      p.add %Q{cols="#{cols}" rows="#{their_rows}" #{their_gecko_hack}>#{their_string}</textarea>\n}
+
+      if quoted then
+        p.add %Q{<br />*<i>Spaces at the beginning and/or end of this one are important.</i> }
+      end
     end
 
     p.add "</form>"

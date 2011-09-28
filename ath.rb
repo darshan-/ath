@@ -144,7 +144,7 @@ class AndroidTranslationHelper
       end
 
       p.add %Q{en:<br />\n<textarea }
-      p.add %Q{cols="#{cols}" rows="#{en_rows}" #{en_gecko_hack}>#{en_string}</textarea><br />\n}
+      p.add %Q{cols="#{cols}" rows="#{en_rows}" #{en_gecko_hack} disabled="true">#{en_string}</textarea><br />\n}
       p.add %Q{#{lang}:<br />\n<textarea name="#{name}" }
       p.add %Q{cols="#{cols}" rows="#{xx_rows}" #{xx_gecko_hack}>#{xx_string}</textarea>\n}
 
@@ -243,7 +243,7 @@ class AndroidTranslationHelper
       end
 
       p.add %Q{yours:<br />\n<textarea }
-      p.add %Q{cols="#{cols}" rows="#{your_rows}" #{your_gecko_hack}>#{your_string}</textarea><br />\n}
+      p.add %Q{cols="#{cols}" rows="#{your_rows}" #{your_gecko_hack} disabled="true">#{your_string}</textarea><br />\n}
       p.add %Q{theirs:<br />\n<textarea name="#{name}" }
       p.add %Q{cols="#{cols}" rows="#{their_rows}" #{their_gecko_hack}>#{their_string}</textarea>\n}
 

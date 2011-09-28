@@ -177,6 +177,7 @@ class AndroidTranslationHelper
     end
 
     p.add %Q{<form action="" method="post">}
+    p.add %Q{<input type="hidden" name="_ath_translated_from" value="#{Time.now.to_f}" />\n}
 
     @strings['en'].each do |key, value|
       add_string.call(key, value, @strings[lang][key])
@@ -193,17 +194,23 @@ class AndroidTranslationHelper
     anchor = nil
     params.each_key do |key|
       if key.match(/^_ath_submit_(.*)/)
-        anchor = $1;
+        anchor = $1
         params.delete(key)
         break
       end
     end
 
+    translated_from = params['_ath_translated_from'].to_f
+    params.delete('_ath_translated_from')
+
     strings = {}
     conflicts = {}
 
     insert_value = lambda do |value, key|
-      strings[key] = {'string' => value, 'quoted' => @strings['en'][key]['quoted']}
+      container = strings
+      container = conflicts if @strings[lang][key]['modified_at'] > translated_from and value != @strings[lang][key]['string']
+
+      container[key] = {'string' => value, 'quoted' => @strings['en'][key]['quoted']}
     end
 
     params.each do |key, value|
@@ -227,7 +234,25 @@ class AndroidTranslationHelper
 
     @strings[lang] = @storage.put_strings(lang, strings)
 
-    [302, {'Location' => @env['REQUEST_URI'] + '#' << anchor}, '302 Found']
+    if conflicts.empty?
+      [302, {'Location' => @env['REQUEST_URI'] + '#' << anchor}, '302 Found']
+    else
+      resolve_conflicts(lang, conflicts)
+    end
+  end
+
+  def resolve_conflicts(lang, conflicts)
+    p = AthPage.new()
+    p.title = "Resolve conflicts"
+    p.add "<h2>Please resolve these conflicts</h2>\n"
+
+    conflicts.each do |key, value|
+      p.add key + "<br />\n"
+      p.add "You said #{value['string']}<br />\n"
+      p.add "But in the mean time, someone else said #{@strings[lang][key]['string']}<br />\n"
+    end
+
+    [200, {'Content-Type' => 'text/html'}, p.generate]
   end
 
   def dump_env

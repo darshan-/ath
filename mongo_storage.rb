@@ -36,7 +36,7 @@ class MongoStorage
       next if current[name]['string'] == hash['string']
       next if hash['string'].empty? and not current.has_key?(name)
 
-      hash['modified_at'] = Time.now
+      hash['modified_at'] = Time.now.to_f
       update.push('name' => name, 'hash' => hash)
       current[name] = hash
     end

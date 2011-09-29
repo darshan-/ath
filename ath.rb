@@ -9,7 +9,6 @@ require './dsts-ext.rb'
 require 'benchmark'
 
 class AndroidTranslationHelper
-  TA_COLS = 80 # How many columns to use for the strings' textareas
   NOT_FOUND = [404, {'Content-Type' => 'text/plain'}, '404 - Not Found' + ' '*512] # Padded so Chrome shows the 404
   STORAGE_CLASS = MongoStorage
 
@@ -79,7 +78,7 @@ class AndroidTranslationHelper
   end
 
   def home()
-    p = AthPage.new
+    p = AthPage.new(@gecko_p)
     existing = @storage.get_langs()
     unstarted = Language::Languages.values - existing - ['en']
 
@@ -119,7 +118,7 @@ class AndroidTranslationHelper
   def show_translate_form(lang)
     return NOT_FOUND unless valid_lang?(lang)
 
-    p = AthPage.new()
+    p = AthPage.new(@gecko_p)
     p.title = "Translate to #{Language::Languages.key(lang)}"
     p.add %Q{<p><a href="/ath/bi/">Home</a></p>}
     p.add "<h2>#{p.title}</h2>\n"
@@ -127,38 +126,13 @@ class AndroidTranslationHelper
     @trans_ins ||= IO.read('translation_instructions.html')
     p.add @trans_ins
 
-    add_string = lambda do |name, en_string, xx_string, quoted|
-      anchor_name = name.gsub(/\[|\]/, '')
-      p.add %Q{<hr><div><a name="#{anchor_name}"><b>#{name}#{'*' if quoted}</b></a>}
-      p.add %Q{<input style="float: right;" type="submit" name="_ath_submit_#{anchor_name}" value="Save All" /></div>\n}
-
-      cols = TA_COLS
-      
-      en_rows = count_rows(en_string) || 1
-      xx_rows = count_rows(xx_string) || en_rows
-
-      en_gecko_hack = xx_gecko_hack = ""
-      if @gecko_p then
-        en_gecko_hack = %Q{style="height:#{en_rows * 1.3}em;"}
-        xx_gecko_hack = %Q{style="height:#{xx_rows * 1.3}em;"}
-      end
-
-      p.add %Q{en:<br />\n<textarea }
-      p.add %Q{cols="#{cols}" rows="#{en_rows}" #{en_gecko_hack} disabled="true">#{en_string}</textarea><br />\n}
-      p.add %Q{#{lang}:<br />\n<textarea name="#{name}" }
-      p.add %Q{cols="#{cols}" rows="#{xx_rows}" #{xx_gecko_hack}>#{xx_string}</textarea>\n}
-
-      if quoted then
-        p.add %Q{<br />*<i>Spaces at the beginning and/or end of this one are important.</i> }
-        p.add %Q{<b>Be sure to match the original</b> (unless you really should do something different in your language).}
-      end
-    end
-
     p.add %Q{<form action="" method="post">}
     p.add %Q{<input type="hidden" name="_ath_translated_from" value="#{Time.now.to_f}" />\n}
 
     @strings['en'].each do |key, value|
-      add_string.call(key, value['string'], @strings[lang][key]['string'], value['quoted'])
+      p.add_trans_str_section(key, {'en' => @strings['en'][key]['string'],
+                                    lang => @strings[lang][key]['string']},
+                              :quoted => @strings['en'][key]['quoted'])
     end
 
     p.add "</form>"
@@ -220,7 +194,7 @@ class AndroidTranslationHelper
   end
 
   def resolve_conflicts(lang, conflicts, anchor)
-    p = AthPage.new()
+    p = AthPage.new(@gecko_p)
     p.title = "Conflicts Encountered!"
     p.add "<h2>#{p.title}</h2>\n"
 
@@ -232,63 +206,15 @@ class AndroidTranslationHelper
     p.add %Q{<input type="hidden" name="_ath_submit_#{anchor}" value="1" />\n}
 
     conflicts.each do |key, value|
-      quoted = @strings['en'][key]['quoted']
-
-      p.add %Q{<hr><div><b>#{key}#{'*' if quoted}</b>}
-      p.add %Q{<input style="float: right;" type="submit" value="Save All" /></div>\n}
-
-      cols = TA_COLS
-
-      en_string = @strings['en'][key]['string']
-      your_string = value['string']
-      their_string = @strings[lang][key]['string']
-
-      en_rows = count_rows(en_string) || 1
-      your_rows = count_rows(your_string) || en_rows
-      their_rows = count_rows(their_string) || en_rows
-
-      en_gecko_hack = your_gecko_hack = their_gecko_hack = ""
-      if @gecko_p then
-        en_gecko_hack = %Q{style="height:#{en_rows * 1.3}em;"}
-        your_gecko_hack = %Q{style="height:#{your_rows * 1.3}em;"}
-        their_gecko_hack = %Q{style="height:#{their_rows * 1.3}em;"}
-      end
-
-      p.add %Q{en:<br />\n<textarea }
-      p.add %Q{cols="#{cols}" rows="#{en_rows}" #{en_gecko_hack} disabled="true">#{en_string}</textarea><br />\n}
-      p.add %Q{#{lang}-yours:<br />\n<textarea }
-      p.add %Q{cols="#{cols}" rows="#{your_rows}" #{your_gecko_hack} disabled="true">#{your_string}</textarea><br />\n}
-      p.add %Q{#{lang}-theirs:<br />\n<textarea name="#{key}" }
-      p.add %Q{cols="#{cols}" rows="#{their_rows}" #{their_gecko_hack}>#{their_string}</textarea>\n}
-
-      if quoted then
-        p.add %Q{<br />*<i>Spaces at the beginning and/or end of this one are important.</i> }
-      end
+      p.add_trans_str_section(key, {            'en' => @strings['en'][key]['string'],
+                                    "#{lang}-yours"  => @strings[lang][key]['string'],
+                                    "#{lang}-theirs" => value['string']},
+                              :quoted => @strings['en'][key]['quoted'], :anchor_p => false)
     end
 
     p.add "</form>"
 
     [200, {'Content-Type' => 'text/html'}, p.generate]
-  end
-
-  # Doesn't account for words that don't fit at the end starting new lines, but gets plenty close for now
-  def count_rows(s)
-    return nil if s.nil?
-
-    col = 1
-    row = 1
-
-    s.each_char do |c|
-      if c == "\n" or col > TA_COLS then
-        col = 1
-        row += 1
-        next
-      end
-
-      col += 1
-    end
-
-    row
   end
 
   def dump_env

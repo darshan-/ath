@@ -186,7 +186,9 @@ class AndroidTranslationHelper
 
     insert_value = lambda do |value, key|
       container = strings
-      container = conflicts if @strings[lang][key]['modified_at'] > translated_from and value != @strings[lang][key]['string']
+      container = conflicts if @strings[lang][key] and
+                               @strings[lang][key]['modified_at'] > translated_from and
+                               value != @strings[lang][key]['string']
 
       container[key] = {'string' => value, 'quoted' => @strings['en'][key]['quoted']}
     end
@@ -200,12 +202,10 @@ class AndroidTranslationHelper
         else                  # plural
           value.each do |q, v|
             realkey = key + "[#{q}]"
-            next if v.empty? and @strings[lang][realkey].empty?
             insert_value.call(v, realkey)
           end
         end
       else                    # string
-        next if value.empty? and @strings[lang][key].empty?
         insert_value.call(value, key)
       end
     end

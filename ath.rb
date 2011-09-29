@@ -126,7 +126,7 @@ class AndroidTranslationHelper
     @trans_ins ||= IO.read('translation_instructions.html')
     p.add @trans_ins
 
-    p.add %Q{<form action="" method="post">}
+    p.add %Q{<form action="" method="post">\n}
     p.add %Q{<input type="hidden" name="_ath_translated_from" value="#{Time.now.to_f}" />\n}
 
     @strings['en'].each do |key, value|
@@ -201,7 +201,7 @@ class AndroidTranslationHelper
     @conf_res_ins ||= IO.read('conflict_resolution_instructions.html')
     p.add @conf_res_ins
 
-    p.add %Q{<form action="" method="post">}
+    p.add %Q{<form action="" method="post">\n}
     p.add %Q{<input type="hidden" name="_ath_translated_from" value="#{Time.now.to_f}" />\n}
     p.add %Q{<input type="hidden" name="_ath_submit_#{anchor}" value="1" />\n}
 

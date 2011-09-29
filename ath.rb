@@ -209,7 +209,7 @@ class AndroidTranslationHelper
       p.add_trans_str_section(key, {            'en' => @strings['en'][key]['string'],
                                     "#{lang}-yours"  => @strings[lang][key]['string'],
                                     "#{lang}-theirs" => value['string']},
-                              :quoted => @strings['en'][key]['quoted'], :anchor_p => false)
+                              :quoted => @strings['en'][key]['quoted'], :no_anchor => true)
     end
 
     p.add "</form>"

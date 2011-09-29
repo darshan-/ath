@@ -25,7 +25,7 @@ class AthPage < XhtmlPage
 
   def add_trans_str_section(name, fields, options)
     frags = {}
-    if options[:anchor_p]
+    unless options[:no_anchor]
       anchor_name = name.gsub(/\[|\]/, '')
       frags[:anchor] = %Q{<a name="#{anchor_name}">}
       frags[:end_a] = '</a>'

@@ -206,7 +206,7 @@ class AndroidTranslationHelper
     p.add %Q{<input type="hidden" name="_ath_submit_#{anchor}" value="1" />\n}
 
     conflicts.each do |key, value|
-      p.add_trans_str_section(key, {            'en' => @strings['en'][key]['string'],
+      p.add_trans_str_section(key, {'en'             => @strings['en'][key]['string'],
                                     "#{lang}-yours"  => @strings[lang][key]['string'],
                                     "#{lang}-theirs" => value['string']},
                               :quoted => @strings['en'][key]['quoted'], :no_anchor => true)

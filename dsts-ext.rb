@@ -47,7 +47,7 @@ class AthPage < XhtmlPage
       if label == fields.keys.last
         ta_frags[:name] = %Q{name="#{name}" }
       else
-        ta_frags[:disabled] = %Q{ disabled="disabled"}
+        ta_frags[:disabled] = %Q{ readonly="readonly"}
       end
 
       add %Q{#{label}:<br />\n<textarea #{ta_frags[:name]}}

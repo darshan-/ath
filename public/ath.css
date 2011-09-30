@@ -37,6 +37,10 @@ textarea {
   padding: 2px;
 }
 
+textarea[readonly] {
+  background-color: #eee;
+}
+
 h1 {
   margin-bottom: 5px;
 
@@ -72,6 +76,8 @@ h3 {
   padding: 20px;
   margin-top: 10px;
   margin-bottom: 10px;
+
+  border-radius: 15px;
 
   font-size: 15px;
   font-family: Verdana, Arial, Helvetica, sans-serif;

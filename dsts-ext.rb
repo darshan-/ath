@@ -48,10 +48,11 @@ class AthPage < XhtmlPage
         ta_frags[:name] = %Q{name="#{name}" }
       else
         ta_frags[:disabled] = %Q{ readonly="readonly"}
+        ta_frags[:br] = "<br />"
       end
 
       add %Q{#{label}:<br />\n<textarea #{ta_frags[:name]}}
-      add %Q{cols="#{TA_COLS}" rows="#{n_rows}"#{gecko_hack}#{ta_frags[:disabled]}>#{content}</textarea><br />\n}
+      add %Q{cols="#{TA_COLS}" rows="#{n_rows}"#{gecko_hack}#{ta_frags[:disabled]}>#{content}</textarea>#{ta_frags[:br]}\n}
     end
 
     if options[:quoted] then

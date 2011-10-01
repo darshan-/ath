@@ -1,12 +1,14 @@
 # encoding: utf-8
 
 require 'cgi'
+require 'benchmark'
+
 require './s3_storage.rb'
 require './local_storage.rb'
 require './mongo_storage.rb'
+require './str_helper.rb'
 require './language.rb'
 require './dsts-ext.rb'
-require 'benchmark'
 
 class AndroidTranslationHelper
   NOT_FOUND = [404, {'Content-Type' => 'text/plain'}, '404 - Not Found' + ' '*512] # Padded so Chrome shows the 404
@@ -20,6 +22,9 @@ class AndroidTranslationHelper
     end
 
     puts "#{Time.now}: Loaded all strings in #{sprintf('%.3f', m.total)} seconds."
+
+    puts "ATH up and running"
+    #$stdout.fsync()
   end
 
   # Test with, e.g.: app.call({'HTTP_USER_AGENT' => '', 'REQUEST_URI' => '/ath/bi'})
@@ -100,8 +105,7 @@ class AndroidTranslationHelper
     p.add "<b>Start a new translation:</b>\n"
     list_links.call(unstarted)
 
-    p.add "<b>If the language you'd like to translate to isn't listed, "
-    p.add "please email me via the contact info listed in the Android Market.</b>"
+    p.add "<b>If the language you'd like to translate to isn't listed, please email me.</b>"
 
     [200, {'Content-Type' => 'text/html'}, p.generate]
   end
@@ -129,10 +133,10 @@ class AndroidTranslationHelper
     p.add %Q{<form action="" method="post">\n}
     p.add %Q{<input type="hidden" name="_ath_translated_from" value="#{Time.now.to_f}" />\n}
 
+    # TODO: This is now broken; you need to show all possible plurals
     @strings['en'].each do |key, value|
       p.add_trans_str_section(key, {'en' => @strings['en'][key]['string'],
-                                    lang => @strings[lang][key]['string']},
-                              :quoted => @strings['en'][key]['quoted'])
+                                    lang => @strings[lang][key]['string']})
     end
 
     p.add "</form>"
@@ -159,15 +163,15 @@ class AndroidTranslationHelper
     conflicts = {}
 
     insert_value = lambda do |value, key|
-      value = value.gsub(/\s*\\n\s*/, '\n').gsub(/\s+/, ' ').gsub(/\\n/, "\\n\n")
-      value.strip! unless @strings['en'][key]['quoted']
+      value = StrHelper::clean(value)
+      value.strip! unless StrHelper::quoted?(value)
 
       container = strings
       container = conflicts if @strings[lang][key] and
                                @strings[lang][key]['modified_at'] > translated_from and
                                value != @strings[lang][key]['string']
 
-      container[key] = {'string' => value, 'quoted' => @strings['en'][key]['quoted']}
+      container[key] = {'string' => value}
     end
 
     params.each do |key, value|
@@ -212,7 +216,7 @@ class AndroidTranslationHelper
       p.add_trans_str_section(key, {'en'             => @strings['en'][key]['string'],
                                     "#{lang}-yours"  => @strings[lang][key]['string'],
                                     "#{lang}-theirs" => value['string']},
-                              :quoted => @strings['en'][key]['quoted'], :no_anchor => true)
+                              :no_anchor => true)
     end
 
     p.add "</form>"

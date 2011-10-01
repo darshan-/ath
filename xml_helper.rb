@@ -1,13 +1,15 @@
 # encoding: utf-8
+
 require 'nokogiri'
 require 'cgi'
+
+require './str_helper.rb'
 
 module XMLHelper
   def self.xml_to_str(xml)
     strings = {}
 
     parse_string = lambda do |element|
-      h = {}
       s = ''
 
       # element.text strips HTML like <b> and/or <i> that we want to keep, so we loop over the children
@@ -17,17 +19,9 @@ module XMLHelper
         s << c.to_xml(:encoding => 'utf-8')
       end
 
-      # gsub! returns nil if there is no match, so it's no good for chaining unless you know you always match
-      s = s.gsub(/\s*\\n\s*/, '\n').gsub(/\s+/, ' ').gsub(/\\n/, "\\n\n").gsub(/\\("|')/, '\1').strip
+      s = StrHelper.clean(s).gsub(/\\("|')/, '\1')
 
-      if s[0] == '"' and s[s.length-1] == '"' then
-        h['quoted'] = true
-        s = s[1, s.length-2]
-      end
-
-      h['string'] = s
-
-      h
+      {'string' => s}
     end
 
     doc = Nokogiri::XML(xml)
@@ -104,21 +98,16 @@ module XMLHelper
 
   private
 
-  def str_hash_to_s(value)
+  def self.str_hash_to_s(value)
     s = escape_quotes(validate_tags(value['string'])),
-
-    if value['quoted']
-      s = %Q{"#{s}"}
-    else
-      s = s.gsub(/\r|\n/, '').strip
-    end
+    s = s.gsub(/\r|\n/, '').strip unless StrHelper.quoted?(s)
 
     s
   end
 
   # I couldn't figure out how to make a regex do this for me...
   #  (the hard part being: not escaping quotes that are within a tag)
-  def escape_quotes(s)
+  def self.escape_quotes(s)
     i = 0
     len = s.length
     brackets = 0

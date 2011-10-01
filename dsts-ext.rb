@@ -23,7 +23,7 @@ class AthPage < XhtmlPage
     super()
   end
 
-  def add_trans_str_section(name, fields, options)
+  def add_trans_str_section(name, fields, options = {})
     frags = {}
     unless options[:no_anchor]
       anchor_name = name.gsub(/\[|\]/, '')
@@ -32,7 +32,7 @@ class AthPage < XhtmlPage
       frags[:submit_name] = %Q{name="_ath_submit_#{anchor_name}" }
     end
 
-    add %Q{<hr><div>#{frags[:anchor]}<b>#{name}#{'*' if options[:quoted]}</b>#{frags[:end_a]}}
+    add %Q{<hr><div>#{frags[:anchor]}<b>#{name}</b>#{frags[:end_a]}}
     add %Q{<input style="float: right;" type="submit" #{frags[:submit_name]}value="Save All" /></div>\n}
 
     default_n_rows = nil
@@ -53,11 +53,6 @@ class AthPage < XhtmlPage
 
       add %Q{#{label}:<br />\n<textarea #{ta_frags[:name]}}
       add %Q{cols="#{TA_COLS}" rows="#{n_rows}"#{gecko_hack}#{ta_frags[:disabled]}>#{content}</textarea>#{ta_frags[:br]}\n}
-    end
-
-    if options[:quoted] then
-      add %Q{<br />*<i>Spaces at the beginning and/or end of this one are important.</i> }
-      add %Q{<b>Be sure to match the original</b> (unless you really should do something different in your language).}
     end
   end
 

@@ -159,6 +159,9 @@ class AndroidTranslationHelper
     conflicts = {}
 
     insert_value = lambda do |value, key|
+      value = value.gsub(/\s*\\n\s*/, '\n').gsub(/\s+/, ' ').gsub(/\\n/, "\\n\n")
+      value.strip! unless @strings['en'][key]['quoted']
+
       container = strings
       container = conflicts if @strings[lang][key] and
                                @strings[lang][key]['modified_at'] > translated_from and

@@ -56,35 +56,6 @@ module XMLHelper
     res = Nokogiri::XML::Node.new('resources', doc)
     doc.add_child(res)
 
-    # I couldn't figure out how to make a regex do this for me...
-    #  (the hard part being: not escaping quotes that are within a tag)
-    escape_quotes = lambda do |s|
-      i = 0
-      len = s.length
-      brackets = 0
-
-      while i < len do
-        if s[i] == '<' then brackets += 1 end
-        if s[i] == '>' then brackets -= 1 end
-
-        if brackets < 1 && (s[i] == "'" || s[i] == '"')
-          s.insert(i, "\\")
-          i += 1
-          len += 1
-        end
-
-        i += 1
-      end
-
-      s
-    end
-
-    quote_or_clean = lambda do |s, quote_p|
-      return %Q{"#{s}"} if quote_p
-
-      s.gsub(/\r|\n/, '').gsub(/\s+/, ' ').strip
-    end
-
     str_ars = {}
     str_pls = {}
 
@@ -94,8 +65,7 @@ module XMLHelper
         str = Nokogiri::XML::Node.new('string', doc)
         str['name'] = key
         str['formatted'] = 'false'
-        str.content = quote_or_clean.call(escape_quotes.call(validate_tags(value['string'])),
-                                          value['quoted'])
+        str.content = str_hash_to_s(value)
         res.add_child(str)
       elsif not key =~ /:/ # string-array
         name = key.split('[').first
@@ -104,8 +74,7 @@ module XMLHelper
         str_ars[name]['name'] = name
 
         item = Nokogiri::XML::Node.new('item', doc)
-        item.content = quote_or_clean.call(escape_quotes.call(validate_tags(value['string'])),
-                                           value['quoted'])
+        item.content = str_hash_to_s(value)
         str_ars[name].add_child(item)
       else                 # plural
         next if value['string'].empty?
@@ -117,8 +86,7 @@ module XMLHelper
 
         item = Nokogiri::XML::Node.new('item', doc)
         item['quantity'] = quantity
-        item.content = quote_or_clean.call(escape_quotes.call(validate_tags(value['string'])),
-                                           value['quoted'])
+        item.content = str_hash_to_s(value)
         str_pls[name].add_child(item)
       end
     end
@@ -136,7 +104,52 @@ module XMLHelper
 
   private
 
+  def str_hash_to_s(value)
+    s = escape_quotes(validate_tags(value['string'])),
+
+    if value['quoted']
+      s = %Q{"#{s}"}
+    else
+      s = s.gsub(/\r|\n/, '').strip
+    end
+
+    s
+  end
+
+  # I couldn't figure out how to make a regex do this for me...
+  #  (the hard part being: not escaping quotes that are within a tag)
+  def escape_quotes(s)
+    i = 0
+    len = s.length
+    brackets = 0
+
+    while i < len do
+      if s[i] == '<' then brackets += 1 end
+      if s[i] == '>' then brackets -= 1 end
+
+      if brackets < 1 && (s[i] == "'" || s[i] == '"')
+        s.insert(i, "\\")
+        i += 1
+        len += 1
+      end
+
+      i += 1
+    end
+
+    s
+  end
+
   # Makes sure tags are all clean and properly matched; necessary to avoid corrupting XML file
+
+  # TODO: Log (regular `puts') when somethings goes wrong, so I can go
+  # back to the site myself and clean up the broken tags. Or do
+  # something even better, like make this simpler -- just a test.  If
+  # the test fails, the output can be list of fields names with broken
+  # tags.  *Possibly*, I could use some library to validate my
+  # generated xml in memory, and output that xml if it's okay, or the
+  # output of the validator if it's not.  A simple test of my own like
+  # a simpler version of this validate function might be simpler.
+
   def self.validate_tags(s)
     s = s.gsub(/(<)\s*/, '\1').gsub(/(<\/)\s*/, '\1').gsub(/\s*(>)/, '\1')
 

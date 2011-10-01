@@ -4,12 +4,10 @@ PID_FILE='./run/pid'
 
 if [ ! -e $PID_FILE ]
 then
-    echo "Error: $PID_FILE does not exist"
-    exit 1
+    echo "Warning: $PID_FILE does not exist; doing a fresh start rather than restart."
+    bin/up
+else
+    servers=`wc $PID_FILE | awk '{print $1;}'`
+    bin/down
+    bin/up $servers
 fi
-
-servers=`wc $PID_FILE | awk '{print $1;}'`
-
-bin/stop
-
-bin/start $servers

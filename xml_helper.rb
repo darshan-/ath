@@ -99,10 +99,7 @@ module XMLHelper
   private
 
   def self.str_hash_to_s(hash)
-    s = escape_quotes(validate_tags(hash['string']))
-    s = s.gsub(/\r|\n/, '').strip unless StrHelper.quoted?(s)
-
-    s
+    escape_quotes(validate_tags(hash['string'])).gsub(/\r|\n/, '')
   end
 
   # I couldn't figure out how to make a regex do this for me...

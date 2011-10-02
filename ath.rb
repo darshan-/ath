@@ -164,7 +164,6 @@ class AndroidTranslationHelper
 
     insert_value = lambda do |value, key|
       value = StrHelper::clean(value)
-      value.strip! unless StrHelper::quoted?(value)
 
       container = strings
       container = conflicts if @strings[lang][key] and

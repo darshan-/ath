@@ -1,2 +1,30 @@
 = Android Translation Helper
 
+== Notes
+
+=== XML source
+
+Any unescaped quotes will become escaped with the exception of double
+quotes that surround an entire string.  Be aware that
+
+    <string>'"'</string>
+
+will become
+
+    <string>\'\"\'</string>.
+
+The correct way to have a string composed of one double quote is
+
+    <string>\"</string>.
+
+For the same reasons,
+
+    <string>\"x\"</string>
+
+will become
+
+    <string>"x"</string>.
+
+The correct way to have a string show up in Android surrounded by quotes is:
+
+    <string>"\"x\""</string>.

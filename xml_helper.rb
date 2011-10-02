@@ -98,8 +98,8 @@ module XMLHelper
 
   private
 
-  def self.str_hash_to_s(value)
-    s = escape_quotes(validate_tags(value['string'])),
+  def self.str_hash_to_s(hash)
+    s = escape_quotes(validate_tags(hash['string']))
     s = s.gsub(/\r|\n/, '').strip unless StrHelper.quoted?(s)
 
     s
@@ -116,10 +116,12 @@ module XMLHelper
       if s[i] == '<' then brackets += 1 end
       if s[i] == '>' then brackets -= 1 end
 
-      if brackets < 1 && (s[i] == "'" || s[i] == '"')
-        s.insert(i, "\\")
-        i += 1
-        len += 1
+      if brackets < 1 and (s[i] == "'" or s[i] == '"')
+        unless (i == 0 or i == len - 1) and StrHelper::quoted?(s)
+          s.insert(i, '\\')
+          i += 1
+          len += 1
+        end
       end
 
       i += 1

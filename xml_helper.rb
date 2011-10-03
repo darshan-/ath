@@ -52,10 +52,16 @@ module XMLHelper
 
     str_ars = {}
     str_pls = {}
+    errors  = {}
 
     strings.each do |key, value|
       if not key =~ /\[/   # string
         next if value['string'].empty?
+
+        e = check_tags(value['string'])
+        errors[key] = e if e
+        next if not errors.empty?
+
         str = Nokogiri::XML::Node.new('string', doc)
         str['name'] = key
         str['formatted'] = 'false'
@@ -63,6 +69,10 @@ module XMLHelper
         res.add_child(str)
       elsif not key =~ /:/ # string-array
         name = key.split('[').first
+
+        e = check_tags(value['string'])
+        errors[name] = e if e
+        next if not errors.empty?
 
         str_ars[name] ||= Nokogiri::XML::Node.new('string-array', doc)
         str_ars[name]['name'] = name
@@ -75,6 +85,10 @@ module XMLHelper
         name = key.split('[').first
         quantity = key.split(':')[1].split(']').first
 
+        e = check_tags(value['string'])
+        errors[name] = e if e
+        next if not errors.empty?
+
         str_pls[name] ||= Nokogiri::XML::Node.new('plurals', doc)
         str_pls[name]['name'] = name
 
@@ -83,6 +97,16 @@ module XMLHelper
         item.content = str_hash_to_s(value)
         str_pls[name].add_child(item)
       end
+    end
+
+    if not errors.empty?
+      s = ""
+
+      errors.each do |name, error|
+        s << "#{name}:\n\t#{error}\n"
+      end
+
+      return s
     end
 
     str_ars.values.each do |a|
@@ -99,7 +123,7 @@ module XMLHelper
   private
 
   def self.str_hash_to_s(hash)
-    escape_quotes(validate_tags(hash['string'])).gsub(/\r|\n/, '')
+    escape_quotes(hash['string']).gsub(/\r|\n/, '')
   end
 
   # I couldn't figure out how to make a regex do this for me...
@@ -127,89 +151,58 @@ module XMLHelper
     s
   end
 
-  # Makes sure tags are all clean and properly matched; necessary to avoid corrupting XML file
-
-  # TODO: Log (regular `puts') when somethings goes wrong, so I can go
-  # back to the site myself and clean up the broken tags. Or do
-  # something even better, like make this simpler -- just a test.  If
-  # the test fails, the output can be list of fields names with broken
-  # tags.  *Possibly*, I could use some library to validate my
-  # generated xml in memory, and output that xml if it's okay, or the
-  # output of the validator if it's not.  A simple test of my own like
-  # a simpler version of this validate function might be simpler.
-
-  def self.validate_tags(s)
-    s = s.gsub(/(<)\s*/, '\1').gsub(/(<\/)\s*/, '\1').gsub(/\s*(>)/, '\1')
-
+  def self.check_tags(s)
     open_tags = []
     cur_tag = nil
     cur_tag_extras = nil
     is_end_tag = false
-    failure = false
-
-    validate_attrs = lambda do |s|
-      return if s.nil?
-      s = s.gsub(/\s+/, ' ').gsub(/\s*=\s*/, '=').strip
-      failure = !s.match(/^([a-z]+="[^"]*"\s*)*\/?$/)
-    end
 
     i = 0
-    while (i < s.length) do
+    len = s.length
+    while (i < len) do
       c = s[i]
 
       if c == '<'
         if cur_tag
-          s.slice!(i)
-
-          next
+          return "Unclosed open-bracket at index #{i}: <#{cur_tag}"
         else
-          cur_tag = String.new
+          cur_tag = ""
           cur_tag_extras = nil
           is_end_tag = false
         end
       elsif c == '>'
         if cur_tag
-          if cur_tag.length > 0
-            if is_end_tag
-              if cur_tag_extras and cur_tag_extras.strip.length > 0
-                failure = true
-                break
-              elsif cur_tag == open_tags.last
-                open_tags.pop
-                cur_tag = nil
-              else
-                failure = true
-                break
-              end
-            else
-              if s[i-1] != '/'
-                open_tags.push(cur_tag)
-              end
+          return "Empty tag at index #{i}" if cur_tag.length == 0
 
-              validate_attrs.call(cur_tag_extras)
-              break if failure
-
+          if is_end_tag
+            if cur_tag_extras and cur_tag_extras.length > 0
+              return "End tag with attributes at index #{i}: <#{cur_tag} #{cur_tag_extras}>"
+            elsif cur_tag == open_tags.last
+              open_tags.pop
               cur_tag = nil
+            else
+              return "Close tag </#{cur_tag}> does not match open tag <#{open_tags.last}> at index #{i}"
             end
           else
-            if is_end_tag
-              s.slice!(i-2..i)
-              i -= 2
-            else
-              s.slice!(i-1..i)
-              i -= 1
+            if s[i-1] != '/'
+              open_tags.push(cur_tag)
+            end
+
+            if cur_tag_extras and not cur_tag_extras.match(/^(\s[a-z]+="[^"]*")+\/?$/)
+              return "Bad attrubutes '#{cur_tag_extras}' in tag <#{cur_tag}> at index #{i}"
             end
 
             cur_tag = nil
-            next
           end
         else
-          s.slice!(i)
-
-          next
+          return "Close-bracket where it doesn't belong at index #{i}"
         end
+      elsif c == ' ' and cur_tag == ''
+        return "Space at begining of tag at index #{i}"
+      elsif c == ' ' and cur_tag and is_end_tag
+        return "Space in end tag '</#{cur_tag}' at index #{i}"
       elsif c == ' ' and cur_tag and not cur_tag_extras
-        cur_tag_extras = String.new
+        cur_tag_extras = " "
       elsif c == '/' and s[i-1] == '<'
         is_end_tag = true
       elsif cur_tag
@@ -223,13 +216,9 @@ module XMLHelper
       i += 1
     end
 
-    failure = true if not open_tags.empty?
-    failure = true if cur_tag
+    return "Unclosed tag: <#{open_tags.pop}>" if not open_tags.empty?
+    return "Unclosed open-bracket: <#{cur_tag}" if cur_tag
 
-    if failure
-      s = s.gsub(/<|>/, '')
-    end
-
-    s
+    nil
   end
 end

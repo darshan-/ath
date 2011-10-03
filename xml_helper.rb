@@ -6,7 +6,9 @@ require 'cgi'
 require './str_helper.rb'
 
 module XMLHelper
-  def self.xml_to_str(xml)
+  extend self # So methods don't have to be defined with self.method_name
+
+  def xml_to_str(xml)
     strings = {}
 
     parse_string = lambda do |element|
@@ -45,7 +47,7 @@ module XMLHelper
     strings
   end
 
-  def self.str_to_xml(strings)
+  def str_to_xml(strings)
     doc = Nokogiri::XML('')
     res = Nokogiri::XML::Node.new('resources', doc)
     doc.add_child(res)
@@ -122,13 +124,13 @@ module XMLHelper
 
   private
 
-  def self.str_hash_to_s(hash)
+  def str_hash_to_s(hash)
     escape_quotes(hash['string']).gsub(/\r|\n/, '')
   end
 
   # I couldn't figure out how to make a regex do this for me...
   #  (the hard part being: not escaping quotes that are within a tag)
-  def self.escape_quotes(s)
+  def escape_quotes(s)
     i = 0
     len = s.length
     brackets = 0
@@ -151,7 +153,7 @@ module XMLHelper
     s
   end
 
-  def self.check_tags(s)
+  def check_tags(s)
     open_tags = []
     cur_tag = nil
     cur_tag_extras = nil

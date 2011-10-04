@@ -1,14 +1,13 @@
 # encoding: utf-8
 
-require 'cgi'
 require 'benchmark'
+require 'cgi'
 
-require './s3_storage.rb'
-require './local_storage.rb'
+require './dsts-ext.rb'
+require './language.rb'
 require './mongo_storage.rb'
 require './str_helper.rb'
-require './language.rb'
-require './dsts-ext.rb'
+require './xml_helper.rb'
 
 class AndroidTranslationHelper
   NOT_FOUND = [404, {'Content-Type' => 'text/plain'}, '404 - Not Found' + ' '*512] # Padded so Chrome shows the 404
@@ -24,7 +23,6 @@ class AndroidTranslationHelper
     puts "#{Time.now}: Loaded all strings in #{sprintf('%.3f', m.total)} seconds."
 
     puts "ATH up and running"
-    #$stdout.fsync()
   end
 
   # Test with, e.g.: app.call({'HTTP_USER_AGENT' => '', 'REQUEST_URI' => '/ath/bi'})
@@ -53,15 +51,19 @@ class AndroidTranslationHelper
     return NOT_FOUND unless @path[0] == 'bi'
     @path.delete_at(0)
 
-    if @path.empty? then
+    if @path.empty? and m == 'GET' then
       home()
-    elsif @path[0] == 'reload_strings'
-      reload_en()
-    elsif @path[0] == 'translate_to'
+    elsif @path[0] == 'translate_to' and @path.length == 2
       if m == 'POST'
         post_translate_form(@path[1], Rack::Request.new(@env).params)
       else
         show_translate_form(@path[1])
+      end
+    elsif @path[0] == 'langs' and m == 'GET' and @path.length <= 2
+      if @path.length == 1
+        langs()
+      else
+        lang_xml(@path[1])
       end
     else
       NOT_FOUND
@@ -74,12 +76,6 @@ class AndroidTranslationHelper
     (@storage.get_langs() + ['en']).each do |lang|
       @strings[lang] = @storage.get_strings(lang)
     end
-  end
-
-  def reload_strings()
-    initialize_cache()
-
-    [302, {'Location' => '/ath/bi/'}, '302 Found']
   end
 
   def home()
@@ -110,13 +106,31 @@ class AndroidTranslationHelper
     [200, {'Content-Type' => 'text/html'}, p.generate]
   end
 
+  def langs()
+    s = ''
+
+    @storage.get_langs().each do |lang|
+      s << lang << "\n"
+    end
+
+    [200, {'Content-Type' => 'text/plain'}, s]
+  end
+
+  def lang_xml(lang)
+    return NOT_FOUND unless valid_lang?(lang)
+
+    [200, {'Content-Type' => 'text/plain'}, XMLHelper.str_to_xml(@storage.get_strings(lang))]
+  end
+
   def valid_lang?(lang)
-    return true  if @strings.has_key?(lang)
+    return false if lang == 'en'            # Not valid to edit en through web
+
+    return true  if @strings.has_key?(lang) # Valid existing translation
+
     return false if lang.nil?
-    return false if lang == 'en' # Not valid to edit en through web
     return false if not Language::Languages.has_value?(lang)
 
-    true
+    true                                    # Valid lang for a new translation
   end
 
   def show_translate_form(lang)

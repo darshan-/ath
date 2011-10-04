@@ -12,6 +12,7 @@ require './xml_helper.rb'
 class AndroidTranslationHelper
   NOT_FOUND = [404, {'Content-Type' => 'text/plain'}, '404 - Not Found' + ' '*512] # Padded so Chrome shows the 404
   STORAGE_CLASS = MongoStorage
+  INCOMING_EN = 'incoming/en.xml'
 
   def initialize()
     @storage = STORAGE_CLASS.new
@@ -65,6 +66,8 @@ class AndroidTranslationHelper
       else
         lang_xml(@path[1])
       end
+    elsif @path[0] == 'load_new_en' and m == 'POST' and @path.length == 1
+      load_new_en()
     else
       NOT_FOUND
     end
@@ -120,6 +123,20 @@ class AndroidTranslationHelper
     return NOT_FOUND unless valid_lang?(lang)
 
     [200, {'Content-Type' => 'text/plain'}, XMLHelper.str_to_xml(@storage.get_strings(lang))]
+  end
+
+  # After `scp'ing the file in, use one of these:
+  # wget --quiet -O /dev/null --ignore-length --post-data="" http://<host>/ath/bi/load_new_en
+  # curl --silent --fail --data "" http://<host>/ath/bi/load_new_en
+  def load_new_en()
+    return NOT_FOUND unless File.exists?(INCOMING_EN)
+
+    @storage.put_strings('en', XMLHelper.xml_to_str(IO.read(INCOMING_EN)))
+    @strings['en'] = @storage.get_strings('en') # Store and then retrieve to get mtimes
+
+    File.delete(INCOMING_EN)
+
+    [204, {}, '']
   end
 
   def valid_lang?(lang)

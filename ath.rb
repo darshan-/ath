@@ -133,10 +133,24 @@ class AndroidTranslationHelper
     p.add %Q{<form action="" method="post">\n}
     p.add %Q{<input type="hidden" name="_ath_translated_from" value="#{Time.now.to_f}" />\n}
 
-    # TODO: This is now broken; you need to show all possible plurals
+    plurals = {}
+
     @strings['en'].each do |key, value|
+      if key =~ /\[:/ # plural
+        plurals[key.split('[').first] = nil
+        next
+      end
+
       p.add_trans_str_section(key, {'en' => @strings['en'][key]['string'],
                                     lang => @strings[lang][key]['string']})
+    end
+
+    plurals.keys.each do |key_base|
+      %w(zero one two few many other).each do |quantity|
+        key = "#{key_base}[:#{quantity}]"
+        p.add_trans_str_section(key, {'en' => @strings['en'][key]['string'],
+                                      lang => @strings[lang][key]['string']})
+      end
     end
 
     p.add "</form>"

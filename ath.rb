@@ -108,13 +108,7 @@ class AndroidTranslationHelper
   end
 
   def langs()
-    s = ''
-
-    @storage.get_langs().each do |lang|
-      s << lang << "\n"
-    end
-
-    [200, {'Content-Type' => 'text/plain'}, s]
+    [200, {'Content-Type' => 'text/plain'}, @storage.get_langs().join(' ')]
   end
 
   def lang_xml(lang)

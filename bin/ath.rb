@@ -10,6 +10,7 @@ end
 
 BASE_PORT = 8080
 MAX_SERVERS = 1 # Only one actually allowed with current ATH design (strings in memory)
+RUN_DIR  = './run/'
 LOG_FILE = './run/log'
 PID_FILE = './run/pid'
 
@@ -37,6 +38,8 @@ up = lambda do |argv = []|
     puts "Error: mongod does not appear to be running"
     exit 1
   end
+
+  system("mkdir -p #{RUN_DIR}")
 
   if servers > MAX_SERVERS then
     puts "Warning: #{servers} is greater than maximum of #{MAX_SERVERS}; starting only #{MAX_SERVERS} servers"

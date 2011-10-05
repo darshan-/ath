@@ -22,8 +22,6 @@ class AndroidTranslationHelper
     end
 
     puts "#{Time.now}: Loaded all strings in #{sprintf('%.3f', m.total)} seconds."
-
-    puts "ATH up and running"
   end
 
   # Test with, e.g.: app.call({'HTTP_USER_AGENT' => '', 'REQUEST_URI' => '/ath/bi'})

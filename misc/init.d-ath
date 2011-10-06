@@ -1,0 +1,17 @@
+#!/sbin/runscript
+
+depend() {
+    need mongod
+}
+
+start() {
+    ebegin "Starting ath"
+    sudo -i -u darshan "/home/darshan/ath/bin/run-ath.sh up"
+    eend $? "Failed to start ath"
+}
+
+stop() {
+    ebegin "Stopping ath"
+    sudo -i -u darshan "/home/darshan/ath/bin/run-ath.sh down"
+    eend $? "Failed to stop ath"
+}

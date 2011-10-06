@@ -10,7 +10,7 @@
     server {
         location ^~ /ath/static/ {
             rewrite ^/ath/static/(.*)$ /$1 break;
-            root /path-to-aws/public;
+            root /local-path-to-ath/public;
         }
 
         location ^~ /ath/ {

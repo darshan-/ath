@@ -1,0 +1,17 @@
+#!/sbin/runscript
+
+PIDFILE="/var/run/mongod.pid"
+MONGOD_PATH="/usr/local/bin/mongod"
+MONGOD_OPTS="--config /etc/mongod.conf"
+
+start() {
+    ebegin "Starting mongod"
+    start-stop-daemon --start --background --make-pidfile --pidfile $PIDFILE --user mongod --exec $MONGOD_PATH -- $MONGOD_OPTS
+    eend $? "Failed to start mongod"
+}
+
+stop() {
+    ebegin "Stopping mongod"
+    start-stop-daemon --stop --pidfile $PIDFILE
+    eend $? "Failed to stop mongod"
+}

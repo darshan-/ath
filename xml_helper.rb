@@ -12,6 +12,8 @@ module XMLHelper
     strings = {}
 
     parse_string = lambda do |element|
+      return {'string' => nil} if element.nil?
+
       s = ''
 
       # element.text strips HTML like <b> and/or <i> that we want to keep, so we loop over the children
@@ -39,8 +41,8 @@ module XMLHelper
     end
 
     doc.xpath('//plurals').each do |sp_el|
-      sp_el.element_children.each do |item_el|
-        strings[sp_el.attr('name') << "[:#{item_el.attr('quantity')}]"] = parse_string.call(item_el)
+      %w(zero one two few many other).each do |quantity|
+        strings[sp_el.attr('name') << "[:#{quantity}]"] = parse_string.call(sp_el.element_children.at("[@quantity=#{quantity}]"))
       end
     end
 

@@ -27,15 +27,15 @@ class MongoStorage
     strings
   end
 
-  def put_strings(lang, strings)
+  def put_strings(lang, strings, preserve_empty = (lang == 'en'))
     c = @db.collection(lang)
 
     current = get_strings(lang)
     update = []
 
     strings.each do |name, hash|
-      next if current[name]['string'] == hash['string']
-      next if hash['string'].empty? and not current.has_key?(name)
+      next if current[name]['string'] == hash['string'] and not hash['string'].empty?
+      next if hash['string'].empty? and not current.has_key?(name) and not preserve_empty
 
       hash['modified_at'] = Time.now.to_f
       update.push('name' => name, 'hash' => hash)

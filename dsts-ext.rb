@@ -7,7 +7,7 @@ class AthPage < XhtmlPage
 
   def initialize(gecko_p = false)
     super()
-    @style_sheets = ['/ath/static/ath.css']
+    @style_sheets = ['/static/ath.css']
     @gecko_p = gecko_p
   end
 

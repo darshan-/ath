@@ -32,8 +32,8 @@ class AndroidTranslationHelper
     # REQUEST_URI is still encoded; split before decoding to allow encoded slashes
     @path = env['REQUEST_URI'].split('/')
 
-    # REQUEST_URI starts with /ath/, so delete blank first element and second ('ath') element
-    2.times { @path.delete_at(0) }
+    # REQUEST_URI starts with a slash, so delete blank first element
+    @path.delete_at(0)
 
     @path.each_index do |i|
       @path[i]= CGI.unescape(@path[i])
@@ -88,7 +88,7 @@ class AndroidTranslationHelper
       p.add "<ul>"
       Language::Languages.each do |lang, code|
         next if !codes.include?(code)
-        p.add %Q{<li><a href="/ath/bi/translate_to/#{code}">#{lang}</a></li>\n}
+        p.add %Q{<li><a href="/bi/translate_to/#{code}">#{lang}</a></li>\n}
       end
       p.add "</ul>"
     end
@@ -118,8 +118,8 @@ class AndroidTranslationHelper
   end
 
   # After `scp'ing the file in, use one of these:
-  # wget --quiet -O /dev/null --ignore-length --post-data="" http://<host>/ath/bi/load_new_en
-  # curl --silent --fail --data "" http://<host>/ath/bi/load_new_en
+  # wget --quiet -O /dev/null --ignore-length --post-data="" http://<host>/bi/load_new_en
+  # curl --silent --fail --data "" http://<host>/bi/load_new_en
   def load_new_en()
     return NOT_FOUND unless File.exists?(INCOMING_EN)
 
@@ -147,7 +147,7 @@ class AndroidTranslationHelper
 
     p = AthPage.new(@gecko_p)
     p.title = "Translate to #{Language::Languages.key(lang)}"
-    p.add %Q{<p><a href="/ath/bi/">Home</a></p>}
+    p.add %Q{<p><a href="/bi/">Home</a></p>}
     p.add "<h2>#{p.title}</h2>\n"
 
     @trans_ins ||= IO.read('translation_instructions.html')

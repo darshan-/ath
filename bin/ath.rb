@@ -114,6 +114,16 @@ status = lambda do |argv = []|
   end
 end
 
+reload = lambda do |argv = []|
+  system("wget --quiet -O /dev/null --ignore-length --post-data="" http://ath.localhost/bi/reload_text")
+
+  if $?.exitstatus > 0
+    puts "Something went wrong."
+  else
+    puts "Reloaded text."
+  end
+end
+
 def bad_usage
   puts "Usage: #{File.basename($PROGRAM_NAME)} COMMAND [subcommands]"
   exit 1
@@ -124,7 +134,7 @@ commands = {'up'      => up,
             'down'    => down,
             'stop'    => down,
             'restart' => restart,
-            'reload'  => restart,
+            'reload'  => reload,
             'status'  => status}
 
 if command = commands[ARGV.shift]

@@ -22,6 +22,8 @@ class AndroidTranslationHelper
     end
 
     puts "#{Time.now}: Loaded all strings in #{sprintf('%.3f', m.total)} seconds."
+
+    load_text()
   end
 
   # Test with, e.g.: app.call({'HTTP_USER_AGENT' => '', 'REQUEST_URI' => '/ath/bi'})
@@ -66,6 +68,9 @@ class AndroidTranslationHelper
       end
     elsif @path[0] == 'load_new_en' and m == 'POST' and @path.length == 1
       load_new_en()
+    elsif @path[0] == 'reload_text' and m == 'POST' and @path.length == 1 and @env['REMOTE_ADDR'] == '127.0.0.1'
+      load_text()
+      [204, {}, '']
     else
       NOT_FOUND
     end
@@ -95,6 +100,8 @@ class AndroidTranslationHelper
 
     p.title = "Battery Indicator Translation Helper"
     p.add "<h2>#{p.title}</h2>\n"
+
+    p.add %Q{<div class="news">#{@text[:news]}</div>}
 
     p.add "<b>Work on an existing translation:</b>\n"
     list_links.call(existing)
@@ -131,6 +138,13 @@ class AndroidTranslationHelper
     [204, {}, '']
   end
 
+  def load_text()
+    @text ||= {}
+    @text[:news] = IO.read('text/news.html')
+    @text[:trans_instr] = IO.read('text/trans_instr.html')
+    @text[:confl_instr] = IO.read('text/confl_instr.html')
+  end
+
   def valid_lang?(lang)
     return false if lang == 'en'            # Not valid to edit en through web
 
@@ -150,8 +164,7 @@ class AndroidTranslationHelper
     p.add %Q{<p><a href="/bi/">Home</a></p>}
     p.add "<h2>#{p.title}</h2>\n"
 
-    @trans_ins ||= IO.read('translation_instructions.html')
-    p.add @trans_ins
+    p.add @text[:trans_instr]
 
     p.add %Q{<form action="" method="post">\n}
     p.add %Q{<input type="hidden" name="_ath_translated_from" value="#{Time.now.to_f}" />\n}
@@ -226,8 +239,7 @@ class AndroidTranslationHelper
     p.title = "Conflicts Encountered!"
     p.add "<h2>#{p.title}</h2>\n"
 
-    @conf_res_ins ||= IO.read('conflict_resolution_instructions.html')
-    p.add @conf_res_ins
+    p.add @text[:confl_instr]
 
     p.add %Q{<form action="" method="post">\n}
     p.add %Q{<input type="hidden" name="_ath_translated_from" value="#{Time.now.to_f}" />\n}

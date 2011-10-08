@@ -93,6 +93,17 @@ h3 {
   color: #111;
 }
 
+.news {
+  width: 600px;
+  background-color: #eee;
+  border: 2px solid grey;
+  border-radius: 10px;
+  padding: 10px;
+  padding-bottom: 0px;
+  margin-left: 15px;
+  margin-bottom: 10px;
+}
+
 #centered_page_wrapper {
   width: 700px;
   position: relative;

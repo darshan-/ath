@@ -4,18 +4,17 @@ require 'benchmark'
 require 'cgi'
 
 require './dsts-ext.rb'
-require './language.rb'
+require './const.rb'
 require './mongo_storage.rb'
 require './str_helper.rb'
 require './xml_helper.rb'
 
 class AndroidTranslationHelper
   NOT_FOUND = [404, {'Content-Type' => 'text/plain'}, '404 - Not Found' + ' '*512] # Padded so Chrome shows the 404
-  STORAGE_CLASS = MongoStorage
   INCOMING_EN = 'incoming/en.xml'
 
   def initialize()
-    @storage = STORAGE_CLASS.new
+    @storage = MongoStorage.new('bi') # TODO: @storage and @strings still need to be updated to support multiple apps
 
     m = Benchmark.measure do
       initialize_cache()
@@ -49,11 +48,14 @@ class AndroidTranslationHelper
   def route
     m = @env['REQUEST_METHOD']
 
-    return NOT_FOUND unless @path[0] == 'bi'
-    @path.delete_at(0)
+    @app = @path.shift
 
-    if @path.empty? and m == 'GET' then
+    if not @app
       home()
+    elsif not Const::Apps.has_value?(@app)
+      NOT_FOUND
+    elsif @path.empty? and m == 'GET'
+      choose_language()
     elsif @path[0] == 'translate_to' and @path.length == 2
       if m == 'POST'
         post_translate_form(@path[1], Rack::Request.new(@env).params)
@@ -92,20 +94,36 @@ class AndroidTranslationHelper
   end
 
   def home()
-    p = AthPage.new(:gecko_p => @gecko_p)
+    p = AthPage.new()
+
+    p.title = "Android Translation Helper"
+
+    p.add "<b>Choose an app to help translate:</b>\n"
+
+    p.add "<ul>"
+    Const::Apps.each do |app, code|
+      p.add %Q{<li><a href="/#{code}/">#{app}</a></li>\n}
+    end
+    p.add "</ul>"
+
+    [200, {'Content-Type' => 'text/html'}, p.generate]
+  end
+
+  def choose_language()
+    p = AthPage.new()
     existing = @storage.get_langs()
-    unstarted = Language::Languages.values - existing - ['en']
+    unstarted = Const::Languages.values - existing - ['en']
 
     list_links = lambda do |codes|
       p.add "<ul>"
-      Language::Languages.each do |lang, code|
+      Const::Languages.each do |lang, code|
         next if !codes.include?(code)
-        p.add %Q{<li><a href="/bi/translate_to/#{code}">#{lang}</a></li>\n}
+        p.add %Q{<li><a href="/#{@app}/translate_to/#{code}">#{lang}</a></li>\n}
       end
       p.add "</ul>"
     end
 
-    p.title = "Battery Indicator Translation Helper"
+    p.title = "#{Const::Apps.key(@app)} Translation Helper"
 
     p.add %Q{<p><a href="/">Apps</a></p>}
     p.add %Q{<div class="news">#{@text[:news]}</div>\n}
@@ -151,7 +169,7 @@ class AndroidTranslationHelper
     return true  if @strings.has_key?(lang) # Valid existing translation
 
     return false if lang.nil?
-    return false if not Language::Languages.has_value?(lang)
+    return false if not Const::Languages.has_value?(lang)
 
     true                                    # Valid lang for a new translation
   end
@@ -160,10 +178,10 @@ class AndroidTranslationHelper
     return NOT_FOUND unless valid_lang?(lang)
 
     p = AthPage.new(:gecko_p => @gecko_p)
-    p.title = "Battery Indicator Translation Helper"
+    p.title = "#{Const::Apps.key(@app)} Translation Helper"
 
-    p.add %Q{<div><a href="/">Apps</a> | <a href="/bi/">Languages</a></div>}
-    p.add "<h2>Translate to #{Language::Languages.key(lang)}</h2>\n"
+    p.add %Q{<div><a href="/">Apps</a> | <a href="/#{@app}/">Languages</a></div>}
+    p.add "<h2>Translate to #{Const::Languages.key(lang)}</h2>\n"
 
     p.add @text[:trans_instr]
 

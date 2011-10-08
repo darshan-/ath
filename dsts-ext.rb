@@ -5,13 +5,13 @@ require './lib/dsts.rb'
 class AthPage < XhtmlPage
   TA_COLS = 80 # How many columns to use for the strings' textareas
 
-  def initialize(options)
+  def initialize(options = {})
     super()
     @style_sheets = ['/static/ath.css']
     @options.merge!(options)
   end
 
-  def open_body(options={})
+  def open_body()
     super()
 
     main_header = options[:main_header]

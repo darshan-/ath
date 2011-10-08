@@ -1,12 +1,16 @@
 # encoding: utf-8
 
-module Language
+module Const
+  Apps = {
+    'Battery Indicator' => 'bi'
+  }
+
   Languages = {
     'Arabic' => 'ar',
     'Bulgarian' => 'bg',
     'Catalan' => 'ca',
     'Chinese, PRC' => 'zhCN',
-    'Chinese, traditional characters, non-PRC locales' => 'zh',
+    'Chinese, traditional characters' => 'zh',
     'Croatian' => 'hr',
     'Czech' => 'cs',
     'Danish' => 'da',

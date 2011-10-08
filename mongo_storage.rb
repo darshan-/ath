@@ -4,10 +4,10 @@ require 'mongo'
 require './lib/nicer_nil.rb'
 
 class MongoStorage
-  DB_NAME = 'ath_bi'
+  DB_BASENAME = 'ath_'
 
-  def initialize()
-    @db = Mongo::Connection.new.db(DB_NAME)
+  def initialize(app_code)
+    @db = Mongo::Connection.new.db(DB_BASENAME + app_code)
   end
 
   def get_langs()

@@ -5,17 +5,22 @@ require './lib/dsts.rb'
 class AthPage < XhtmlPage
   TA_COLS = 80 # How many columns to use for the strings' textareas
 
-  def initialize(gecko_p = false)
+  def initialize(options)
     super()
     @style_sheets = ['/static/ath.css']
-    @gecko_p = gecko_p
+    @options.merge!(options)
   end
 
-  def open_body()
+  def open_body(options={})
     super()
+
+    main_header = options[:main_header]
+    main_header ||= ""
 
     @page << %Q{<div id="centered_page_wrapper">}
     @page << %Q{<div class="main_box">}
+
+    @page << %Q{<h1>#{@title}</h1>} unless @options[:no_title]
   end
 
   def close_body()
@@ -41,7 +46,7 @@ class AthPage < XhtmlPage
       default_n_rows ||= n_rows
 
       gecko_hack = ''
-      gecko_hack = %Q{ style="height: #{n_rows * 1.3}em;"} if @gecko_p
+      gecko_hack = %Q{ style="height: #{n_rows * 1.3}em;"} if @options[:gecko_p]
 
       ta_frags = {}
       if label == fields.keys.last

@@ -84,8 +84,15 @@ class AndroidTranslationHelper
     end
   end
 
+  def load_text()
+    @text ||= {}
+    @text[:news] = IO.read('text/news.html')
+    @text[:trans_instr] = IO.read('text/trans_instr.html')
+    @text[:confl_instr] = IO.read('text/confl_instr.html')
+  end
+
   def home()
-    p = AthPage.new(@gecko_p)
+    p = AthPage.new(:gecko_p => @gecko_p)
     existing = @storage.get_langs()
     unstarted = Language::Languages.values - existing - ['en']
 
@@ -99,9 +106,9 @@ class AndroidTranslationHelper
     end
 
     p.title = "Battery Indicator Translation Helper"
-    p.add "<h2>#{p.title}</h2>\n"
 
-    p.add %Q{<div class="news">#{@text[:news]}</div>}
+    p.add %Q{<p><a href="/">Apps</a></p>}
+    p.add %Q{<div class="news">#{@text[:news]}</div>\n}
 
     p.add "<b>Work on an existing translation:</b>\n"
     list_links.call(existing)
@@ -109,7 +116,7 @@ class AndroidTranslationHelper
     p.add "<b>Start a new translation:</b>\n"
     list_links.call(unstarted)
 
-    p.add "<b>If the language you'd like to translate to isn't listed, please email me.</b>"
+    p.add "<b>If the language you'd like to translate to isn't listed, please email me.</b>\n"
 
     [200, {'Content-Type' => 'text/html'}, p.generate]
   end
@@ -138,13 +145,6 @@ class AndroidTranslationHelper
     [204, {}, '']
   end
 
-  def load_text()
-    @text ||= {}
-    @text[:news] = IO.read('text/news.html')
-    @text[:trans_instr] = IO.read('text/trans_instr.html')
-    @text[:confl_instr] = IO.read('text/confl_instr.html')
-  end
-
   def valid_lang?(lang)
     return false if lang == 'en'            # Not valid to edit en through web
 
@@ -159,10 +159,11 @@ class AndroidTranslationHelper
   def show_translate_form(lang)
     return NOT_FOUND unless valid_lang?(lang)
 
-    p = AthPage.new(@gecko_p)
-    p.title = "Translate to #{Language::Languages.key(lang)}"
-    p.add %Q{<p><a href="/bi/">Home</a></p>}
-    p.add "<h2>#{p.title}</h2>\n"
+    p = AthPage.new(:gecko_p => @gecko_p)
+    p.title = "Battery Indicator Translation Helper"
+
+    p.add %Q{<div><a href="/">Apps</a> | <a href="/bi/">Languages</a></div>}
+    p.add "<h2>Translate to #{Language::Languages.key(lang)}</h2>\n"
 
     p.add @text[:trans_instr]
 
@@ -235,9 +236,8 @@ class AndroidTranslationHelper
   end
 
   def resolve_conflicts(lang, conflicts, anchor)
-    p = AthPage.new(@gecko_p)
+    p = AthPage.new(:gecko_p => @gecko_p)
     p.title = "Conflicts Encountered!"
-    p.add "<h2>#{p.title}</h2>\n"
 
     p.add @text[:confl_instr]
 

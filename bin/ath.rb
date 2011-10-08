@@ -73,15 +73,17 @@ end
 down = lambda do |argv = []|
   bad_usage() unless argv.empty?
 
-  if not File.exists?(PID_FILE)
-    puts "Error: #{PID_FILE} does not exist"
+  pids = live_pids()
+
+  if pids.empty?
+    puts "Warning: #{PID_FILE} does not exist; doing nothing."
     exit 1
   end
 
-  IO.readlines(PID_FILE).each do |line|
-    pid = line.strip()
-    puts "Stopping server with PID #{pid}"
-    system("kill #{pid}")
+  pids.each do |pid, running|
+    action = running ? "Stopping" : "IGNORING DEFUNCT"
+    puts "#{action} server with PID #{pid}"
+    system("kill #{pid}") if running
   end
   
   File.delete(PID_FILE)
@@ -103,14 +105,16 @@ end
 status = lambda do |argv = []|
   bad_usage() unless argv.empty?
 
-  if not File.exists?(PID_FILE)
+  pids = live_pids()
+
+  if pids.empty?
     puts "Not running"
     exit
   end
 
-  IO.readlines(PID_FILE).each do |line|
-    pid = line.strip()
-    puts "Running with PID #{pid}"
+  pids.each do |pid, running|
+    status = running ? "Running" : "DEFUNCT"
+    puts "#{status} with PID #{pid}"
   end
 end
 
@@ -122,6 +126,21 @@ reload = lambda do |argv = []|
   else
     puts "Reloaded text."
   end
+end
+
+def live_pids()
+  a = {}
+
+  return a if not File.exists?(PID_FILE)
+
+  IO.readlines(PID_FILE).each do |line|
+    pid = line.strip()
+    c = `ps --no-heading -p #{pid} -o command`.strip.split
+
+    a[pid] = (c.length > 1 and c[1] == __FILE__)
+  end
+
+  a
 end
 
 def bad_usage

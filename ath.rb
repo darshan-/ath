@@ -98,7 +98,7 @@ class AndroidTranslationHelper
 
     p.title = "Android Translation Helper"
 
-    p.add "<b>Choose an app to help translate:</b>\n"
+    p.add "<p><b>Choose an app to help translate:</b></p>\n"
 
     p.add "<ul>"
     Const::Apps.each do |app, code|
@@ -128,10 +128,10 @@ class AndroidTranslationHelper
     p.add %Q{<p><a href="/">Apps</a></p>}
     p.add %Q{<div class="news">#{@text[:news]}</div>\n}
 
-    p.add "<b>Work on an existing translation:</b>\n"
+    p.add "<p><b>Work on an existing translation:</b></p>\n"
     list_links.call(existing)
 
-    p.add "<b>Start a new translation:</b>\n"
+    p.add "<p><b>Start a new translation:</b></p>\n"
     list_links.call(unstarted)
 
     p.add "<b>If the language you'd like to translate to isn't listed, please email me.</b>\n"

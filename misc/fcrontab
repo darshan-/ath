@@ -1,0 +1,2 @@
+# Mins Hours Days Months Weekdays Command
+  1    *     *    *      *        sudo -i -u darshan /home/darshan/ath/bin/backup_db.sh

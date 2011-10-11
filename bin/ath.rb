@@ -46,24 +46,13 @@ up = lambda do |argv = []|
     servers = MAX_SERVERS
   end
 
-  $stdout = File.open(LOG_FILE, 'a')
-  $stdout.sync = true # So I can look at the logs while the app is running
-
-  port = BASE_PORT
+  redirect_stdout()
   do_requires()
 
+  port = BASE_PORT
+
   servers.times do
-    fork do
-      $stderr.puts "Starting server on port #{port} with PID #{$$}"
-
-      File.open(PID_FILE, 'a') do |file|
-        file.puts $$
-      end
-
-      Rack::Handler::Thin.run(AndroidTranslationHelper.new(), :Host => '127.0.0.1', :Port => port)
-    end
-    sleep 0.01
-
+    start_server(port)
     port += 1
   end
 
@@ -120,6 +109,8 @@ status = lambda do |argv = []|
 end
 
 reload = lambda do |argv = []|
+  bad_usage() unless argv.empty?
+
   system("wget --quiet -O /dev/null --ignore-length --post-data="" http://ath.localhost/bi/reload_text")
 
   if $?.exitstatus > 0
@@ -127,6 +118,52 @@ reload = lambda do |argv = []|
   else
     puts "Reloaded text."
   end
+end
+
+restart_crashed = lambda do |argv = []|
+  bad_usage() unless argv.empty?
+
+  pids = live_pids()
+  return if pids.values.count(false).zero?
+
+  redirect_stdout()
+  do_requires()
+
+  port = BASE_PORT
+
+  File.delete(PID_FILE)
+
+  pids.each do |pid, running|
+    if running
+      File.open(PID_FILE, 'a') do |file|
+        file.puts pid
+      end
+    else
+      puts "#{Time.now} Huh, the server on port #{port} seems to have crashed; restarting..."
+      start_server(port)
+    end
+
+    port += 1
+  end
+end
+
+def start_server(port)
+  fork do
+    $stderr.puts "Starting server on port #{port} with PID #{$$}"
+
+    File.open(PID_FILE, 'a') do |file|
+      file.puts $$
+    end
+
+    Rack::Handler::Thin.run(AndroidTranslationHelper.new(), :Host => '127.0.0.1', :Port => port)
+  end
+
+  sleep 0.01
+end
+
+def redirect_stdout()
+  $stdout = File.open(LOG_FILE, 'a')
+  $stdout.sync = true # So I can look at the logs while the app is running
 end
 
 def live_pids()
@@ -155,7 +192,8 @@ commands = {'up'      => up,
             'stop'    => down,
             'restart' => restart,
             'reload'  => reload,
-            'status'  => status}
+            'status'  => status,
+            'uncrash' => restart_crashed}
 
 if command = commands[ARGV.shift]
   command.call(ARGV)

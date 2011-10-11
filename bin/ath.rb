@@ -5,7 +5,7 @@
 def do_requires()
   require 'rack'
   require './lib/my_thin.rb'
-  require './ath.rb'
+  require './android_translation_helper.rb'
 end
 
 BASE_PORT = 8080
@@ -29,8 +29,8 @@ up = lambda do |argv = []|
 
   servers ||= 1
 
-  if File.exists?(PID_FILE) then
-    puts "Error: #{PID_FILE} exists"
+  if not live_pids().empty? then
+    puts "Error: Already running"
     exit 1
   end
 
@@ -76,12 +76,12 @@ down = lambda do |argv = []|
   pids = live_pids()
 
   if pids.empty?
-    puts "Warning: #{PID_FILE} does not exist; doing nothing."
+    puts "Warning: Not running; doing nothing."
     exit 1
   end
 
   pids.each do |pid, running|
-    action = running ? "Stopping" : "IGNORING DEFUNCT"
+    action = running ? "  Stopping" : "* Removing"
     puts "#{action} server with PID #{pid}"
     system("kill #{pid}") if running
   end
@@ -92,13 +92,14 @@ end
 restart = lambda do |argv = []|
   bad_usage() unless argv.empty?
 
-  if not File.exists?(PID_FILE)
-    puts "Warning: #{PID_FILE} does not exist; doing a fresh start rather than restart."
+  pids = live_pids()
+
+  if pids.empty?
+    puts "Warning: No instances running; doing a fresh start rather than restart."
     up.call()
   else
-    n_servers = `wc #{PID_FILE} | awk '{print $1;}'`
     down.call()
-    up.call([n_servers])
+    up.call([pids.length])
   end
 end
 
@@ -113,7 +114,7 @@ status = lambda do |argv = []|
   end
 
   pids.each do |pid, running|
-    status = running ? "Running" : "DEFUNCT"
+    status = running ? "  Running" : "* CRASHED"
     puts "#{status} with PID #{pid}"
   end
 end

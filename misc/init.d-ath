@@ -6,12 +6,12 @@ depend() {
 
 start() {
     ebegin "Starting ath"
-    sudo -i -u darshan "/home/darshan/ath/bin/run-ath.sh up"
+    sudo -i -u darshan "ath up"
     eend $? "Failed to start ath"
 }
 
 stop() {
     ebegin "Stopping ath"
-    sudo -i -u darshan "/home/darshan/ath/bin/run-ath.sh down"
+    sudo -i -u darshan "ath down"
     eend $? "Failed to stop ath"
 }

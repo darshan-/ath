@@ -10,9 +10,13 @@ end
 
 BASE_PORT = 8080
 MAX_SERVERS = 1 # Only one actually allowed with current ATH design (strings in memory)
+
+ATH_DIR  = File.dirname(File.dirname(File.realpath(__FILE__)))
 RUN_DIR  = './run/'
 LOG_FILE = './run/log'
 PID_FILE = './run/pid'
+
+Dir.chdir(ATH_DIR)
 
 Encoding.default_internal = 'utf-8'
 

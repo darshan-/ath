@@ -10,6 +10,10 @@
     server {
         server_name  ath.*;
 
+        location /robots.txt {
+            root /home/darshan/ath/static;
+        }
+
         location ^~ /static/ {
             root <local-path-to-ath>;
         }

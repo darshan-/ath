@@ -49,7 +49,7 @@ module XMLHelper
     strings
   end
 
-  def str_to_xml(strings)
+  def str_to_xml(strings, model_strings = nil)
     doc = Nokogiri::XML('')
     res = Nokogiri::XML::Node.new('resources', doc)
     doc.add_child(res)
@@ -58,9 +58,13 @@ module XMLHelper
     str_pls = {}
     errors  = {}
 
-    strings.each do |key, value|
+    model_strings ||= strings
+
+    model_strings.keys.each do |key|
+      value = strings[key]
+
       if not key =~ /\[/   # string
-        next if value['string'].empty?
+        next if value.nil? or value['string'].empty?
 
         e = check_tags(value['string'])
         errors[key] = e if e
@@ -74,6 +78,10 @@ module XMLHelper
       elsif not key =~ /:/ # string-array
         name = key.split('[').first
 
+        # TODO: At first glance, this seems to mostly work, but I don't want to copy everything from model if array is empty, only the missing items of a partial array
+        #   Might think about how to fix it here, or filter out downstream by removing arrays that are identical to en
+        value ||= model_strings[key]
+
         e = check_tags(value['string'])
         errors[name] = e if e
         next if not errors.empty?
@@ -85,7 +93,7 @@ module XMLHelper
         item.content = str_hash_to_s(value)
         str_ars[name].add_child(item)
       else                 # plural
-        next if value['string'].empty?
+        next if value.nil? or value['string'].empty?
         name = key.split('[').first
         quantity = key.split(':')[1].split(']').first
 

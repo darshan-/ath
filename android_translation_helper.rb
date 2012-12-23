@@ -147,7 +147,7 @@ class AndroidTranslationHelper
     return NOT_FOUND unless valid_lang?(lang)
 
     puts "Sending XML for lang: #{lang}"
-    [200, {'Content-Type' => 'text/plain'}, XMLHelper.str_to_xml(@storage.get_strings(lang))]
+    [200, {'Content-Type' => 'text/plain'}, XMLHelper.str_to_xml(@storage.get_strings(lang), @storage.get_strings('en'))]
   end
 
   # After `scp'ing the file in, use one of these:

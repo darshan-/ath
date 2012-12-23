@@ -146,6 +146,7 @@ class AndroidTranslationHelper
   def lang_xml(lang)
     return NOT_FOUND unless valid_lang?(lang)
 
+    puts "Sending XML for lang: #{lang}"
     [200, {'Content-Type' => 'text/plain'}, XMLHelper.str_to_xml(@storage.get_strings(lang))]
   end
 

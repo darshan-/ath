@@ -78,33 +78,33 @@ module XMLHelper
       elsif not key =~ /:/ # string-array
         name = key.split('[').first
 
-        puts "Looking at string-array: #{name}"
+        # puts "Looking at string-array: #{name}"
 
         ar_present = false
 
         if not str_ars[name].nil?
-          puts "array is known present because str_ars[#{name}] is not nil"
+          # puts "array is known present because str_ars[#{name}] is not nil"
           ar_present = true
         else
           i = 0
-          puts "i = #{i}"
+          # puts "i = #{i}"
           while not model_strings[name + "[#{i}]"].nil? # Step through all actual values in original
-            puts "model_strings['#{name}[#{i}]'] is not nil, so let's see if it exists in strings"
+            # puts "model_strings['#{name}[#{i}]'] is not nil, so let's see if it exists in strings"
             if value.nil? or value['string'].empty?
-              puts "strings['#{name}[#{i}]'] is nil or empty"
+              # puts "strings['#{name}[#{i}]'] is nil or empty"
               i += 1
-              puts "i = #{i}"
+              # puts "i = #{i}"
               next
             else
-              puts "strings['#{name}[#{i}]'] exists, so this array is present"
+              # puts "strings['#{name}[#{i}]'] exists, so this array is present"
               ar_present = true
               break
             end
           end
-          puts "searched through all of strings['#{name}'] without finding anything, so this array is not present" if not ar_present
+          # puts "searched through all of strings['#{name}'] without finding anything, so this array is not present" if not ar_present
         end
 
-        puts "array '#{name} present?: #{ar_present}"
+        # puts "array '#{name} present?: #{ar_present}"
 
         next if not ar_present
 

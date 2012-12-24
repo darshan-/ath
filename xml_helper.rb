@@ -78,9 +78,38 @@ module XMLHelper
       elsif not key =~ /:/ # string-array
         name = key.split('[').first
 
-        # TODO: At first glance, this seems to mostly work, but I don't want to copy everything from model if array is empty, only the missing items of a partial array
-        #   Might think about how to fix it here, or filter out downstream by removing arrays that are identical to en
+        puts "Looking at string-array: #{name}"
+
+        ar_present = false
+
+        if not str_ars[name].nil?
+          puts "array is known present because str_ars[#{name}] is not nil"
+          ar_present = true
+        else
+          i = 0
+          puts "i = #{i}"
+          while not model_strings[name + "[#{i}]"].nil? # Step through all actual values in original
+            puts "model_strings['#{name}[#{i}]'] is not nil, so let's see if it exists in strings"
+            if value.nil? or value['string'].empty?
+              puts "strings['#{name}[#{i}]'] is nil or empty"
+              i += 1
+              puts "i = #{i}"
+              next
+            else
+              puts "strings['#{name}[#{i}]'] exists, so this array is present"
+              ar_present = true
+              break
+            end
+          end
+          puts "searched through all of strings['#{name}'] without finding anything, so this array is not present" if not ar_present
+        end
+
+        puts "array '#{name} present?: #{ar_present}"
+
+        next if not ar_present
+
         value ||= model_strings[key]
+        value['string'] = model_strings[key]['string'] if value['string'].empty?
 
         e = check_tags(value['string'])
         errors[name] = e if e

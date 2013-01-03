@@ -62,11 +62,28 @@ langs.each do |lang|
     end
   end
 
-  ars.each do |name, a|
+  ars.each do |a_name, a|
     update = []
 
-    puts "#{name}: #{a}"
+    name  = a_name.split("[")[0]
+    i     = a_name.split("[")[1].split("]")[0]
+    value = a['string']
 
-    c.insert(update)
+    puts "#{a_name}: #{a}"
+    puts "  Would be renamed to: #{conversions[name][i]}"
+
+    if existing.has_key?(name)
+      puts "Name #{name} already exists with content: #{existing[name]}"
+      if existing[name] == value
+        puts "  (Skipped) new content is the same: #{value}"
+      else
+        puts "  (Skipped) new content is different: #{value}"
+      end
+    else
+      existing[name] = value
+      # set up update
+    end
+
+    #c.insert(update)
   end
 end

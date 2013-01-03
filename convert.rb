@@ -2,36 +2,19 @@
 # encoding: utf-8
 
 require 'nokogiri'
+require 'mongo'
+
+# ath down
+# backup db
 
 # read in convert.xml to see which how to convert the string-arrays
-# for each strings.xml in res/values res/values-?? res/values-??-*
+# for each lang in db
 #   find the string-arrays that match the ones in convert.xml and for each
-#     remove opening and closing string-array tag
-#     change each item to a string with the name from the corresponding convert.xml item
+#     add new string with name from conversions and value from old array
+#     drop array string
 
-# e.g., this:
-#   <string-array name="statuses">
-#     <item>Unplugged</item>
-#     <item>Unknown</item>
-#     <item>Charging</item>
-#     <item>Discharging</item>
-#     <item>Not Charging</item>
-#     <item>Fully Charged</item>
-#   </string-array>
-
-# based on this in convert.xml:
-#   <string-array name="statuses">
-#     <item>status_unplugged</item>
-#     <item>status_unknown</item>
-#     <item>status_charging</item>
-#     <item>status_discharging</item>
-#     <item>status_not_charging</item>
-#     <item>status_fully_charged</item>
-#   </string-array>
-
-# becomes:
-#   <string formatted="false" name="status_unplugged">Unplugged</string>
-#   etc.
+# ath up
+# verify
 
 def parse_string(element)
   return nil if element.nil?
@@ -62,62 +45,28 @@ conv_doc.xpath('//string-array').each do |sa_el|
   conversions[sa_el.attr('name')] = a
 end
 
-str_xml_files = `echo -n res/values/strings.xml res/values-??/strings.xml res/values-??-*/strings.xml`.split
+db = Mongo::Connection.new.db('ath_bi')
+langs = db.collection_names.to_a.delete_if {|i| i =~ /\./} - ['en']
 
-str_xml_files.each do |str_xml_file|
-  old_content = IO.read(str_xml_file)
-  new_content = ""
+langs.each do |lang|
   existing = {}
+  ars = {}
 
-  in_array = false
-  i = -1
+  c = db.collection(lang)
 
-  old_content.each_line do |line|
-    if in_array
-      if i >= conversions[in_array].length
-        in_array = false
-        next
+  c.find.each_entry do |entry|
+    if ars[entry['name']].nil? || ars[entry['name']]['modified_at'] < entry['hash']['modified_at']
+      if entry['name'] =~ /\[/ && not entry['name'] =~ /:/
+        ars[entry['name']] = entry['hash']
       end
-
-      name = conversions[in_array][i]
-      value = line.split("<item>")[1].split("</item>")[0]
-
-      if existing.has_key?(name)
-        puts "Name #{name} already exists with content: #{existing[name]}"
-        if existing[name] == value
-          puts "  (Skipped) new content is the same: #{value}"
-        else
-          puts "  (Skipped) new content is different: #{value}"
-        end
-      else
-        existing[name] = value
-        new_content << %Q{  <string formatted="false" name="#{name}">#{value}</string>\n}
-      end
-
-      i += 1
-      next
     end
-
-    if not line.start_with?("  <string-array ")
-      new_content << line
-      next
-    end
-
-    if line.count('"') != 2
-      new_content << line
-      next
-    end
-
-    a_name = line.split('"')[1]
-
-    if not conversions.has_key?(a_name)
-      new_content << line
-      next
-    end
-
-    in_array = a_name
-    i = 0
   end
 
-  IO.write(str_xml_file, new_content)
+  ars.each do |ah|
+    update = []
+
+    puts ah['name']
+
+    c.insert(update)
+  end
 end

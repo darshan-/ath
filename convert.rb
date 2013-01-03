@@ -56,16 +56,16 @@ langs.each do |lang|
 
   c.find.each_entry do |entry|
     if ars[entry['name']].nil? || ars[entry['name']]['modified_at'] < entry['hash']['modified_at']
-      if entry['name'] =~ /\[/ && not entry['name'] =~ /:/
+      if entry['name'] =~ /\[/ and not entry['name'] =~ /:/
         ars[entry['name']] = entry['hash']
       end
     end
   end
 
-  ars.each do |ah|
+  ars.each do |name, a|
     update = []
 
-    puts ah['name']
+    puts "#{name}: #{a}"
 
     c.insert(update)
   end

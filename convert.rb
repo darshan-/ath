@@ -82,9 +82,10 @@ langs.each do |lang|
       end
     else
       existing[new_name] = value
-      # set up update
+      #update.push('name' => new_name, 'hash' => a)
     end
 
     #c.insert(update)
+    #c.remove({"name" => old_name})
   end
 end

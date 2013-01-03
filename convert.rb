@@ -71,7 +71,7 @@ langs.each do |lang|
     new_name = conversions[a_name][i]
 
     puts "#{old_name}: #{a}"
-    puts "  Would be renamed to: #{new_name}"
+    puts "  Will be renamed to: #{new_name}"
 
     if existing.has_key?(new_name)
       puts "Name #{new_name} already exists with content: #{existing[new_name]}"
@@ -82,10 +82,10 @@ langs.each do |lang|
       end
     else
       existing[new_name] = value
-      #update.push('name' => new_name, 'hash' => a)
+      update.push('name' => new_name, 'hash' => a)
     end
 
-    #c.insert(update)
-    #c.remove({"name" => old_name})
+    c.insert(update)
+    c.remove({"name" => old_name})
   end
 end

@@ -7,7 +7,8 @@ class MongoStorage
   DB_BASENAME = 'ath_'
 
   def initialize(app_code)
-    @db = Mongo::Client.new([ '127.0.0.1:27017' ], :database => DB_BASENAME + app_code).database
+    @db = Mongo::Connection.new.db(DB_BASENAME + app_code)
+    #@db = Mongo::Client.new([ '127.0.0.1:27017' ], :database => DB_BASENAME + app_code).database
   end
 
   def get_langs()

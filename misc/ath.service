@@ -1,0 +1,12 @@
+[Unit]
+Description=Android Translation Helper
+After=syslog.target network.target mongodb.target
+
+[Service]
+Type=forking
+PIDFile=/home/darshan/ath/run/pid
+ExecStart=/usr/bin/sudo -i -u darshan /home/darshan/bin/ath-restart
+ExecStop=/usr/bin/sudo -i -u darshan /home/darshan/bin/ath-down
+
+[Install]
+WantedBy=multi-user.target

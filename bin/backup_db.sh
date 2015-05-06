@@ -3,7 +3,7 @@
 d=`date +%Y%m%d%H%M`
 gsd="gs://darshancomputing/mongo-dump-current"
 
-cd ~/mongo-dumps/
+cd ~/mongo-dumps/ || exit
 rm -rf *
 
 mongodump -o $d

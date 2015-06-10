@@ -30,6 +30,7 @@ module Const
     'Latvian' => 'lv',
     'Lithuanian' => 'lt',
     'Norwegian bokmål' => 'nb',
+    'Persian' => 'fa',
     'Polish' => 'pl',
     'Portuguese' => 'pt',
     'Portuguese, Brazil' => 'ptBR',

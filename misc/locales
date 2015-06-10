@@ -23,6 +23,7 @@ Also see AOSP's /external/icu4c/data/icu-config.xml
 'en_ZA' => 'English, Zimbabwe',
 'es_ES' => 'Spanish',
 'es_US' => 'Spanish, US',
+'fa'    => 'Persian',
 'fi_FI' => 'Finnish, Finland',
 'fr_BE' => 'French, Belgium',
 'fr_CA' => 'French, Canada',
